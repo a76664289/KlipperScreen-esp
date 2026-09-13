@@ -20,6 +20,7 @@
 #include "esp_heap_caps.h"
 #include "esp_wifi.h"
 #include "bsp_wifi.h"
+#include "bsp_caps.h"
 #include "app_settings.h"
 #include "moonraker_client.h"
 #include "klipper_api.h"
@@ -222,6 +223,25 @@ static void cmd_mem(void)
            (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
 }
 
+/* 强制触摸重校：写标记文件后重启，BSP 启动时检测到标记即进两点校准
+   （校准只能跑在 LVGL 任务启动前，所以不能在当前上下文直接调 touch_cal_run）。
+   能力由 BSP 层 bsp_caps.h 的 BSP_HAS_TOUCH_CAL 声明，上层不认具体机型 */
+static void cmd_caltouch(void)
+{
+#if BSP_HAS_TOUCH_CAL
+    FILE *f = fopen("/littlefs/.caltouch", "w");
+    if (!f) { printf("caltouch: cannot write marker\n"); return; }
+    fputs("1", f);
+    fclose(f);
+    printf("restarting into touch calibration...\n");
+    fflush(stdout);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    esp_restart();
+#else
+    printf("caltouch: 本机型无电阻触摸层（电容屏或无触摸），无需校准\n");
+#endif
+}
+
 /* ---- 堆泄漏跟踪（heap trace standalone，诊断用） ----
    `ht` 开始跟踪（申请记录缓冲），再敲一次 `ht` 停止并按调用点聚合打印未释放块。
    用法：连上 Moonraker 后 ht → 等 ~10s（泄漏几十 KB）→ ht → 把输出贴给上位机，
@@ -332,7 +352,8 @@ static void cli_handle(char *line)
 
     if (!strcmp(line, "help")) {
         printf("commands: help | scan | wifi <ssid> <pass> | wifioff | wifion | mr <host> [port] | mrstart | status | ps\n"
-               "          printer <1-6> | gc <gcode> | ls [path] | cd <path> | pwd | cat <file> | rm <file> | lcdstat [秒] | mem | ht | taskmem\n");
+               "          printer <1-6> | gc <gcode> | ls [path] | cd <path> | pwd | cat <file> | rm <file> | lcdstat [秒] | mem | ht | taskmem\n"
+               "          caltouch            重启并强制进入触摸两点校准（仅电阻屏机型）\n");
     } else if (!strcmp(line, "scan")) {
         cmd_scan();
     } else if (!strcmp(line, "wifi")) {
@@ -347,6 +368,8 @@ static void cli_handle(char *line)
         cmd_gc(args);
     } else if (!strcmp(line, "mem")) {
         cmd_mem();
+    } else if (!strcmp(line, "caltouch")) {
+        cmd_caltouch();
     } else if (!strcmp(line, "ht")) {
         cmd_ht();
     } else if (!strcmp(line, "taskmem")) {

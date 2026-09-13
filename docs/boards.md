@@ -6,6 +6,8 @@
 | [E32R35T](#e32r35t) | `e32r35t` | 3.5" 320×480 ST7796U SPI | XPT2046 resistive | ESP32-32E / 4MB | ✅ Stable |
 | [esp32s3-st7789-320_240-ec11](#esp32s3-st7789-320_240-ec11) | `esp32s3-st7789-320_240-ec11` | 240×320 ST7789 SPI | None, rotary only | ESP32-S3 N16R8 / 16MB | ✅ Official reference, contributor tested |
 | [esp32-st7735s-128_160-ec11](#esp32-st7735s-128_160-ec11) | `esp32-st7735s-128_160-ec11` | 1.8" 128×160 ST7735S SPI | None, rotary only | ESP32 / 4MB | 🆕 New, CYD-compatible pinout |
+| [esp32-st7789-320_240-ec11](#esp32-st7789-320_240-ec11) | `esp32-st7789-320_240-ec11` | 240×320 ST7789 SPI | None, rotary only | ESP32 / 4MB | 🆕 New, CYD-compatible pinout |
+| [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) | `esp32s3-st7796-480_320-xpt2046-ec11` | 480×320 ST7796S SPI | XPT2046 resistive (shared bus) + EC11 | ESP32-S3 N16R8 / 16MB | 🆕 New |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB parallel | GT911 capacitive | ESP32-S3 / 16MB | ✅ Stable |
 | [JLC SZP ESP32-S3](#jlc-szp-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 capacitive | ESP32-S3 N16R8 / 16MB | ✅ Verified |
 
@@ -17,6 +19,8 @@ Flash packages are named `klipper-remote-esp32-<board>.zip` (asset names carry n
 | E32R35T | [klipper-remote-esp32-e32r35t.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-e32r35t.zip) |
 | esp32s3-st7789-320_240-ec11 | [klipper-remote-esp32-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-st7789-320_240-ec11.zip) |
 | esp32-st7735s-128_160-ec11 | [klipper-remote-esp32-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32-st7735s-128_160-ec11.zip) |
+| esp32-st7789-320_240-ec11 | [klipper-remote-esp32-esp32-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32-st7789-320_240-ec11.zip) |
+| esp32s3-st7796-480_320-xpt2046-ec11 | [klipper-remote-esp32-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-st7796-480_320-xpt2046-ec11.zip) |
 | JC8048W550 | [klipper-remote-esp32-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-jc8048w550.zip) |
 | JLC SZP ESP32-S3 | [klipper-remote-esp32-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-JLC-SZP.zip) |
 | Windows desktop simulator | [klipper-remote-desktop-win-x86_64.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-desktop-win-x86_64.zip) |
@@ -143,6 +147,65 @@ A minimal rotary-only build on the **same ESP32 MCU as the CYD 2432S028R**: a 1.
 | EC11 C / GND | GND | Common contact of A/B/SW to GND |
 
 ST7735S modules vary between sellers: if the picture is mirrored or shows a coloured offset band at an edge, adjust `LCD_MIRROR_X/Y` and `LCD_GAP_X/Y` at the top of `src/bsp/esp32/bsp_ec11_knob_esp32.c` and rebuild. Rotation and press provide all navigation, and either action wakes the display after its timeout.
+
+## esp32-st7789-320_240-ec11
+
+![ST7789 240×320 module with EC11](screenshots/boards/esp32_st7789_320_240_ec11.png)
+
+*Typical 240×320 ST7789 SPI module paired with an EC11 encoder. Header pins are usually labelled GND / VCC / SCL / SDA / RES / DC / CS / BLK — `SCL`/`SDA` here are SPI SCLK and MOSI, not I2C.*
+
+A mid-size rotary-only build on the **same ESP32 MCU and the exact same pinout as esp32-st7735s-128_160-ec11** (all IO aligned to the CYD 2432S028R): a 240×320 ST7789 SPI display plus an EC11 encoder, no touch. Logical resolution **320×240 landscape** — the standard layout class, same as the CYD. Only the display panel changes versus the ST7735S build; every wire stays where it is.
+
+- MCU: ESP32 (dual-core 240MHz, 520KB SRAM), 4MB QIO flash
+- Display: ST7789 via the esp_lcd driver (normal colour with the default INVOFF — no forced inversion); SPI2 @ 40MHz, DMA double buffering (2×320×40)
+- Input: EC11 only (PCNT hardware quadrature); no touch layer, never enters touch calibration
+- Backlight: GPIO21, LEDC PWM 8bit/5kHz, active high
+- Screen off / wake: on-board BOOT key (GPIO0)
+
+| Module pin | ESP32 pin | Purpose |
+|---|---|---|
+| ST7789 VCC | 3V3 | Display power |
+| ST7789 GND | GND | Ground |
+| ST7789 SCL / SCK | GPIO14 | SPI clock |
+| ST7789 SDA / MOSI | GPIO13 | SPI data out |
+| ST7789 CS | GPIO15 | Chip select |
+| ST7789 DC / RS | GPIO2 | Data/command select |
+| ST7789 RST / RES | GPIO4 | Display reset |
+| ST7789 BL / LED / BLK | GPIO21 | Backlight, active high |
+| EC11 CLK / A | GPIO35 | **Needs an external ~10kΩ pull-up to 3V3** — GPIO35 is input-only with no internal pull-up |
+| EC11 DT / B | GPIO22 | Internal pull-up |
+| EC11 SW / KEY | GPIO27 | Internal pull-up, active-low |
+| EC11 C / GND | GND | Common contact of A/B/SW to GND |
+
+ST7789 modules vary between sellers: if the picture is mirrored or shows a coloured offset band at an edge, adjust `LCD_MIRROR_X/Y` and `LCD_GAP_X/Y` at the top of `src/bsp/esp32/bsp_ec11_knob_esp32_st7789.c` and rebuild. Rotation and press provide all navigation, and either action wakes the display after its timeout.
+
+## esp32s3-st7796-480_320-xpt2046-ec11
+
+![MKS TS35 V2.0](screenshots/boards/esp32s3_st7796_ec11.png)
+
+*A typical board for this target — the Makerbase MKS TS35 V2.0: 480×320 ST7796S display with XPT2046 resistive touch and an integrated EC11 encoder knob.*
+
+A 480×320 resistive-touch build on the **same ESP32-S3-DevKitC-1 N16R8 base as esp32s3-st7789-320_240-ec11**: an ST7796S SPI display and an XPT2046 touch controller **sharing one SPI bus**, plus the EC11 encoder on the unchanged reference pins. Logical resolution **480×320 landscape** (same layout class as the E32R35T). Factory touch calibration is pre-installed (reused from the E32R35T, same XPT2046 resistive scheme); recalibrate any time via the serial CLI `caltouch` — the result is stored in `touch.json` and loaded on boot.
+
+| Module pin | ESP32-S3 pin | Purpose |
+|---|---|---|
+| SCK | GPIO21 | SPI clock — display + touch shared |
+| MOSI (SDA / DIN) | GPIO47 | SPI data out — display data + touch DIN shared |
+| MISO (DOUT) | GPIO2 | SPI data in — XPT2046 coordinate readback |
+| TFT_CS | GPIO41 | Display chip select |
+| TFT_DC (RS / A0) | GPIO40 | Data/command select |
+| TOUCH_CS | GPIO1 | Touch controller chip select |
+| RST / RES | GPIO45 | Display reset; optional — tie to 3.3V or share the MCU reset (the driver also issues a software reset) |
+| BL / LED / BLK | GPIO42 | Backlight, active high (LEDC PWM) |
+| TOUCH_INT (T_IRQ) | — | Leave unconnected — the driver polls; touch wake/tap/drag all work without it |
+| EC11 CLK / A | GPIO13 | Encoder phase A |
+| EC11 DT / B | GPIO14 | Encoder phase B |
+| EC11 SW / KEY | GPIO46 | Encoder press |
+| EC11 + / VCC | 3V3 | Module power |
+| EC11 GND / C | GND | Common contact of A/B/SW to GND |
+| Screen-off button (add-on) | GPIO39 → button → GND | One-key screen off / wake; internal pull-up, active-low. The on-board BOOT key (GPIO0) works the same way |
+
+Power the DevKit over USB-C. Both touch and the encoder work at the same time — the touch drives pointer gestures and the encoder drives the focus navigation. Display mirror/rotation follow the E32R35T panel defaults; if your unit looks flipped, toggle **Settings → Display → 180° rotation** instead of rewiring.
 
 ## JC8048W550
 

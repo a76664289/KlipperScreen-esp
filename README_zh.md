@@ -3,7 +3,7 @@
 [English README](README.md)
 
 > **📖 文档站：https://umeiko.github.io/KlipperScreen-esp/zh/**
-> 支持的板子与引脚、零基础移植教程、贡献指南都在文档站里。
+
 
 <p align="center">
   <img src="docs/screenshots/main_photo.png" alt="CYD 2432S028R 实机运行效果" width="720">
@@ -58,7 +58,7 @@ ESP-IDF v5.5.5 · LVGL v9.3 · 多后端（ESP32, Windows, Linux, MacOS）
 
 ```bash
 bash tools/build-desktop.sh                       # 桌面端（控制端 + 模拟器）
-bash tools/build-esp32.sh <board> build           # ESP32 固件（6 种板型）
+bash tools/build-esp32.sh <board> build           # ESP32 固件（8 种板型）
 bash tools/build-esp32.sh <board> flash COMx      # 构建并烧录
 ```
 

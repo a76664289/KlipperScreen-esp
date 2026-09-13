@@ -9,7 +9,8 @@
  *   - 背光 GPIO27（高电平点亮）
  * 真机已验证：反色默认关（本板 ST7796 不需 INVON，开了呈底片）；
  * mirror(true,true)+swap_xy 方向正确；触摸出厂默认值已提取自真机校准，
- * 开机免校准，偏差大的个体用串口 CLI caltouch 重校。
+ * 开机免校准。注意：删 touch.json 只会回写出厂默认值，不会进校准；
+ * 默认值不合用的个体需改代码强制走 touch_cal_run()（当前无用户态重校入口）。
  */
 #include "sdkconfig.h"
 #if CONFIG_BOARD_E32R35T
@@ -84,11 +85,12 @@ typedef struct {
 
 /* 出厂默认值：从首台真机两点校准结果提取（touch.json：
    {"xCalM":0.13023783,"yCalM":0.08733624,"xCalC":-30.89468,"yCalC":-17.94760}）。
-   文件缺失时直接可用；偏差大的个体仍可串口 CLI caltouch 重新校准 */
+   文件缺失/损坏时回写该值并直接使用，不会进入校准流程 */
 #define TOUCH_CAL_DEFAULT \
     { 0.13023783266544342f, -30.894680023193359f, 0.0873362421989441f, -17.947597503662109f }
 
-#define TOUCH_CAL_PATH  "/littlefs/touch.json"
+#define TOUCH_CAL_PATH       "/littlefs/touch.json"
+#define TOUCH_CAL_FORCE_PATH "/littlefs/.caltouch"   /* CLI caltouch 写入的强制校准标记 */
 
 static touch_cal_t tcal = TOUCH_CAL_DEFAULT;
 
@@ -128,6 +130,14 @@ static void touch_cal_save(void)
 
 static bool touch_cal_load(void)
 {
+    /* CLI `caltouch` 留下的强制校准标记：删除后返回 false → 进两点校准 */
+    FILE *ff = fopen(TOUCH_CAL_FORCE_PATH, "r");
+    if (ff) {
+        fclose(ff);
+        remove(TOUCH_CAL_FORCE_PATH);
+        ESP_LOGW(TAG, "touch calibration forced via CLI");
+        return false;
+    }
     char buf[160] = {0};
     FILE *f = fopen(TOUCH_CAL_PATH, "r");
     if (f) {
@@ -154,8 +164,8 @@ static bool touch_cal_load(void)
         }
         ESP_LOGW(TAG, "touch cal file invalid, rewriting factory default");
     } else {
-        /* 首次启动：写入出厂默认值（真机提取），不进校准流程；
-           个体偏差大时可串口 CLI caltouch 重新校准 */
+        /* 首次启动：写入出厂默认值（真机提取），不进校准流程。
+           注意：此后删文件重启也只会回到这里重写默认值，不会触发校准 */
         ESP_LOGW(TAG, "touch cal not found, writing factory default");
     }
     /* 缺失或损坏：tcal 已是出厂默认值，落盘即可 */
@@ -525,8 +535,8 @@ void bsp_init(void)
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev, touch_read_cb);
 
-    /* 校准文件缺失/损坏时 touch_cal_load 自动落盘出厂默认值（真机提取）；
-       仅当默认值也不合用时，串口 CLI caltouch 进两点校准（LVGL 任务启动前手动泵帧） */
+    /* 校准文件缺失/损坏时 touch_cal_load 自动落盘出厂默认值（真机提取）并返回 true；
+       CLI `caltouch` 写强制标记重启后才走 touch_cal_run() 两点校准 */
     if (!touch_cal_load()) {
         touch_cal_run();
     }

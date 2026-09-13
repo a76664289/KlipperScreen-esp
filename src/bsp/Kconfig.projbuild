@@ -24,6 +24,12 @@ menu "Board selection"
 
         config BOARD_EC11_KNOB_ESP32
             bool "esp32-st7735s-128_160-ec11 (ESP32 + 1.8\" 128x160 ST7735S + EC11, 引脚对齐 CYD)"
+
+        config BOARD_EC11_KNOB_ESP32_ST7789
+            bool "esp32-st7789-320_240-ec11 (ESP32 + 240x320 ST7789 + EC11, 引脚对齐 CYD)"
+
+        config BOARD_ESP32S3_ST7796_EC11
+            bool "esp32s3-st7796-480_320-xpt2046-ec11 (ESP32-S3 + 480x320 ST7796S + XPT2046 + EC11)"
     endchoice
 
 endmenu

@@ -4,13 +4,15 @@
 #   tools/build-esp32.sh <board> build          构建
 #   tools/build-esp32.sh <board> flash <port>   构建+烧录（如 COM6 / /dev/ttyUSB0）
 #   tools/build-esp32.sh <board> menuconfig     打开 menuconfig（Board selection 里可改板型）
-#   board: cyd_2432s028r | e32r35t | esp32s3-st7789-320_240-ec11 | esp32-st7735s-128_160-ec11 | jc8048w550 | esp32s3-JLC-SZP | all
+#   board: cyd_2432s028r | e32r35t | esp32s3-st7789-320_240-ec11 | esp32-st7735s-128_160-ec11 | esp32-st7789-320_240-ec11 | esp32s3-st7796-480_320-xpt2046-ec11 | jc8048w550 | esp32s3-JLC-SZP | all
 #
 # 每板型独立的构建目录与 sdkconfig（芯片目标不同，不能混用）：
 #   cyd_2432s028r → ESP32   → build/             sdkconfig（仓库已有完整文件）
 #   e32r35t       → ESP32   → build-e32r35t/     sdkconfig.e32r35t（首次构建由 defaults 生成）
 #   esp32s3-st7789-320_240-ec11 → ESP32-S3 + ST7789 + EC11 → build-ec11-knob-minimal/ sdkconfig.esp32s3-st7789-320_240-ec11
 #   esp32-st7735s-128_160-ec11  → ESP32 + ST7735S + EC11（引脚对齐 CYD）→ build-ec11-knob-esp32/ sdkconfig.esp32-st7735s-128_160-ec11
+#   esp32-st7789-320_240-ec11   → ESP32 + ST7789 320x240 + EC11（引脚对齐 CYD）→ build-ec11-knob-esp32-st7789/ sdkconfig.esp32-st7789-320_240-ec11
+#   esp32s3-st7796-480_320-xpt2046-ec11 → ESP32-S3 + ST7796S + XPT2046 + EC11 → build-esp32s3-st7796-ec11/ sdkconfig.esp32s3-st7796-480_320-xpt2046-ec11
 #   jc8048w550    → ESP32-S3 → build-jc8048w550/ sdkconfig.jc8048w550（首次构建由 defaults 生成）
 #   esp32s3-JLC-SZP → 立创实战派 ESP32-S3 → build-esp32s3-jlc-szp/ sdkconfig.esp32s3-JLC-SZP（首次构建由 defaults 生成）
 set -e
@@ -31,13 +33,19 @@ board_conf() {
         esp32-st7735s-128_160-ec11)
             TARGET=esp32;   BDIR=build-ec11-knob-esp32;   SDKCFG=sdkconfig.esp32-st7735s-128_160-ec11
             DEFS="sdkconfig.defaults;sdkconfig.defaults.esp32-st7735s-128_160-ec11" ;;
+        esp32-st7789-320_240-ec11)
+            TARGET=esp32;   BDIR=build-ec11-knob-esp32-st7789; SDKCFG=sdkconfig.esp32-st7789-320_240-ec11
+            DEFS="sdkconfig.defaults;sdkconfig.defaults.esp32-st7789-320_240-ec11" ;;
+        esp32s3-st7796-480_320-xpt2046-ec11)
+            TARGET=esp32s3; BDIR=build-esp32s3-st7796-ec11; SDKCFG=sdkconfig.esp32s3-st7796-480_320-xpt2046-ec11
+            DEFS="sdkconfig.defaults;sdkconfig.defaults.esp32s3-st7796-480_320-xpt2046-ec11" ;;
         jc8048w550)
             TARGET=esp32s3; BDIR=build-jc8048w550; SDKCFG=sdkconfig.jc8048w550
             DEFS="sdkconfig.defaults;sdkconfig.defaults.jc8048w550" ;;
         esp32s3-JLC-SZP)
             TARGET=esp32s3; BDIR=build-esp32s3-jlc-szp; SDKCFG=sdkconfig.esp32s3-JLC-SZP
             DEFS="sdkconfig.defaults;sdkconfig.defaults.esp32s3-JLC-SZP" ;;
-        *) echo "unknown board: $1 (cyd_2432s028r | e32r35t | esp32s3-st7789-320_240-ec11 | esp32-st7735s-128_160-ec11 | jc8048w550 | esp32s3-JLC-SZP | all)" >&2; exit 1 ;;
+        *) echo "unknown board: $1 (cyd_2432s028r | e32r35t | esp32s3-st7789-320_240-ec11 | esp32-st7735s-128_160-ec11 | esp32-st7789-320_240-ec11 | esp32s3-st7796-480_320-xpt2046-ec11 | jc8048w550 | esp32s3-JLC-SZP | all)" >&2; exit 1 ;;
     esac
 }
 
@@ -60,6 +68,8 @@ if [ "$BOARD" = all ]; then
     build_one e32r35t
     build_one esp32s3-st7789-320_240-ec11
     build_one esp32-st7735s-128_160-ec11
+    build_one esp32-st7789-320_240-ec11
+    build_one esp32s3-st7796-480_320-xpt2046-ec11
     build_one jc8048w550
     build_one esp32s3-JLC-SZP
     exit 0

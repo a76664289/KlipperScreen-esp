@@ -12,7 +12,7 @@
 
 同一份 UI 与业务代码支撑三类可构建目标：
 
-- **ESP32 固件**（ESP-IDF 5.5.5，六块板型，见 §4）；
+- **ESP32 固件**（ESP-IDF 5.5.5，七块板型，见 §4）；
 - **Windows 桌面控制端**（SDL2 显示 + WinHTTP WebSocket，真实连接打印机）；
 - **桌面 simulator**（SDL2 + 本地 mock 数据，用于布局开发与截图，Linux/macOS 也构建此目标）。
 
@@ -39,7 +39,7 @@ UI 库为 **LVGL 9.3**。界面参考 KlipperScreen 的交互设计，并加入�
 │                        BSP 层 (src/bsp/)                     │
 │  bsp.h 接口契约 · bsp_screen_power（亮度/息屏状态机）           │
 │  bsp_wifi（非阻塞 WiFi 抽象）· bsp_conf（配置存储介质）          │
-│  esp32/（六块板型 BSP + 旋钮/息屏键/自研 rgb44 驱动）            │
+│  esp32/（七块板型 BSP + 旋钮/息屏键/自研 rgb44 驱动）            │
 │  desktop/（SDL2 BSP + Win/Linux WiFi + 文件存储）              │
 ├─────────────────────────────────────────────────────────────┤
 │                       Ports 层 (src/ports/)                  │
@@ -111,14 +111,16 @@ BSP 还有两个配套抽象：
 - Kconfig `choice BOARD`（`src/bsp/Kconfig.projbuild`）定义 `CONFIG_BOARD_*`；`src/bsp/CMakeLists.txt` 注册全部 BSP 源文件，**文件内部用 `#if CONFIG_BOARD_*` 裁剪**（组件注册的第一遍扫描早于 Kconfig 加载，无法按宏选文件）。
 - 每板型独立的 sdkconfig、defaults 文件、分区表和构建目录（芯片目标不同，不能混用）。构建入口 `tools/build-esp32.sh <board>`，细节见 [building.md](building.md)。**注意**：改 `sdkconfig.defaults.<board>` 对已生成的 `sdkconfig.<board>` 不生效，两个文件都要改。
 
-### 4.3 六块板型
+### 4.3 八块板型
 
 | board | 芯片 | 屏幕 | 输入 | 显示路径 |
 |---|---|---|---|---|
 | `cyd_2432s028r` | ESP32 | 2.8" 320×240 ILI9341 | XPT2046 电阻触摸 | esp_lcd SPI |
 | `e32r35t` | ESP32 | 3.5" 480×320 ST7796 | XPT2046 电阻触摸 | esp_lcd SPI |
 | `esp32-st7735s-128_160-ec11` | ESP32 | 1.8" 160×128 ST7735S | EC11 旋钮（无触摸） | esp_lcd SPI |
+| `esp32-st7789-320_240-ec11` | ESP32 | 320×240 ST7789 | EC11 旋钮（无触摸） | esp_lcd SPI |
 | `esp32s3-st7789-320_240-ec11` | ESP32-S3 | 2" 320×240 ST7789 | EC11 旋钮（无触摸） | esp_lcd SPI |
+| `esp32s3-st7796-480_320-xpt2046-ec11` | ESP32-S3 | 480×320 ST7796S | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
 | `jc8048w550` | ESP32-S3 | 5" 800×480 RGB 并口 | GT911 电容触摸 | 自研 rgb44（见下） |
 | `esp32s3-JLC-SZP` | ESP32-S3 | 2.0" 320×240 ST7789 | FT6336 电容触摸 | 手动 SPI（见下） |
 
@@ -269,9 +271,9 @@ Bambu 连接方式按槽位保存（`bambu_link_t`）：`CLOUD_MONITOR` 云端�
 
 ## 10. 构建与 CI
 
-- ESP32：`bash tools/build-esp32.sh <board> [flash COMx]`，六板型或 `all`；桌面端：`bash tools/build-desktop.sh`。工具链准备与分板型细节见 [building.md](building.md)。
+- ESP32：`bash tools/build-esp32.sh <board> [flash COMx]`，七板型或 `all`；桌面端：`bash tools/build-desktop.sh`。工具链准备与分板型细节见 [building.md](building.md)。
 - 版本号维护在 `src/core/version.h`（`KR_VERSION`，设置页与 Moonraker identify 共用）；发版 = 改它 + 打同名 `vX.Y.Z` tag 推送。
-- CI（`.github/workflows/build.yml`）：push main / tag `v*` / 手动触发。固件矩阵在 `espressif/idf:v5.5.5` 容器里全量构建六块板型（各自独立 sdkconfig 与构建目录），桌面端构建 Windows 与 macOS 目标。tag 触发 release：资产名不带版本号（`klipper-remote-esp32-<board>.zip`），文档站下载直链走 `releases/latest/download/...`；CI 会把移动标签 `latest` 强推到最新正式版提交；tag 含 `wip` 标为预发布。
+- CI（`.github/workflows/build.yml`）：push main / tag `v*` / 手动触发。固件矩阵在 `espressif/idf:v5.5.5` 容器里全量构建七块板型（各自独立 sdkconfig 与构建目录），桌面端构建 Windows 与 macOS 目标。tag 触发 release：资产名不带版本号（`klipper-remote-esp32-<board>.zip`），文档站下载直链走 `releases/latest/download/...`；CI 会把移动标签 `latest` 强推到最新正式版提交；tag 含 `wip` 标为预发布。
 
 ---
 

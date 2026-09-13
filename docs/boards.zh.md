@@ -6,6 +6,8 @@
 | [E32R35T](#e32r35t) | `e32r35t` | 3.5" 320×480 ST7796U SPI | XPT2046 电阻 | ESP32-32E / 4MB | ✅ 稳定 |
 | [esp32s3-st7789-320_240-ec11](#esp32s3-st7789-320_240-ec11) | `esp32s3-st7789-320_240-ec11` | 240×320 ST7789 SPI | 无，纯旋钮 | ESP32-S3 N16R8 / 16MB | ✅ 官方参考，贡献者实机验证 |
 | [esp32-st7735s-128_160-ec11](#esp32-st7735s-128_160-ec11) | `esp32-st7735s-128_160-ec11` | 1.8" 128×160 ST7735S SPI | 无，纯旋钮 | ESP32 / 4MB | 🆕 新机型，引脚兼容 CYD |
+| [esp32-st7789-320_240-ec11](#esp32-st7789-320_240-ec11) | `esp32-st7789-320_240-ec11` | 240×320 ST7789 SPI | 无，纯旋钮 | ESP32 / 4MB | 🆕 新机型，引脚兼容 CYD |
+| [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) | `esp32s3-st7796-480_320-xpt2046-ec11` | 480×320 ST7796S SPI | XPT2046 电阻（共总线）+ EC11 | ESP32-S3 N16R8 / 16MB | 🆕 新机型 |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB 并口 | GT911 电容 | ESP32-S3 / 16MB | ✅ 稳定 |
 | [立创实战派 ESP32-S3](#立创实战派-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 电容 | ESP32-S3 N16R8 / 16MB | ✅ 已实机验证 |
 
@@ -17,6 +19,8 @@
 | E32R35T | [klipper-remote-esp32-e32r35t.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-e32r35t.zip) |
 | esp32s3-st7789-320_240-ec11 | [klipper-remote-esp32-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-st7789-320_240-ec11.zip) |
 | esp32-st7735s-128_160-ec11 | [klipper-remote-esp32-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32-st7735s-128_160-ec11.zip) |
+| esp32-st7789-320_240-ec11 | [klipper-remote-esp32-esp32-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32-st7789-320_240-ec11.zip) |
+| esp32s3-st7796-480_320-xpt2046-ec11 | [klipper-remote-esp32-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-st7796-480_320-xpt2046-ec11.zip) |
 | JC8048W550 | [klipper-remote-esp32-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-jc8048w550.zip) |
 | 立创实战派 ESP32-S3 | [klipper-remote-esp32-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-JLC-SZP.zip) |
 | Windows 桌面模拟器 | [klipper-remote-desktop-win-x86_64.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-desktop-win-x86_64.zip) |
@@ -143,6 +147,65 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | EC11 C / GND | GND | A/B/SW 公共端接地 |
 
 不同卖家的 ST7735S 模组有差异：画面镜像或边缘出现彩边/偏移时，改 `src/bsp/esp32/bsp_ec11_knob_esp32.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 重新编译即可。EC11 的旋转与按下都能导航，屏幕自动熄灭后再次操作旋钮即可唤醒。
+
+## esp32-st7789-320_240-ec11
+
+![ST7789 240×320 模组与 EC11](screenshots/boards/esp32_st7789_320_240_ec11.png)
+
+*常见的 240×320 ST7789 SPI 模组搭配 EC11 编码器。排针一般印 GND / VCC / SCL / SDA / RES / DC / CS / BLK——这里的 `SCL`/`SDA` 是 SPI 的 SCLK 和 MOSI，不是 I2C。*
+
+与 esp32-st7735s-128_160-ec11 **同款主控（ESP32）、完全相同引脚**（全部对齐 CYD 2432S028R）的纯旋钮中屏机型：240×320 ST7789 SPI 屏 + EC11 编码器，无触摸。逻辑分辨率 **320×240 横屏**——标准布局档，与 CYD 一致。相对 ST7735S 机型只是换了一块屏，所有接线原位不动。
+
+- 主控：ESP32（双核 240MHz，520KB SRAM），4MB QIO Flash
+- 显示：ST7789，走 esp_lcd 官方驱动（默认 INVOFF 即正常颜色，无需强制反色）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）
+- 输入：仅 EC11（PCNT 硬件正交解码）；无触摸层，不会进入触摸校准
+- 背光：GPIO21，LEDC PWM 8bit/5kHz，高电平点亮
+- 息屏/唤醒：板载 BOOT 键（GPIO0）
+
+| 模块引脚 | ESP32 引脚 | 用途 |
+|---|---|---|
+| ST7789 VCC | 3V3 | 屏幕供电 |
+| ST7789 GND | GND | 地 |
+| ST7789 SCL / SCK | GPIO14 | SPI 时钟 |
+| ST7789 SDA / MOSI | GPIO13 | SPI 数据输出 |
+| ST7789 CS | GPIO15 | 片选 |
+| ST7789 DC / RS | GPIO2 | 数据/命令选择 |
+| ST7789 RST / RES | GPIO4 | 屏幕复位 |
+| ST7789 BL / LED / BLK | GPIO21 | 背光，高电平点亮 |
+| EC11 CLK / A | GPIO35 | **需外接 ~10kΩ 上拉到 3V3**——GPIO35 只能输入且无内部上拉 |
+| EC11 DT / B | GPIO22 | 内部上拉 |
+| EC11 SW / KEY | GPIO27 | 内部上拉，低电平有效 |
+| EC11 C / GND | GND | A/B/SW 公共端接地 |
+
+不同卖家的 ST7789 模组有差异：画面镜像或边缘出现彩边/偏移时，改 `src/bsp/esp32/bsp_ec11_knob_esp32_st7789.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 重新编译即可。EC11 的旋转与按下都能导航，屏幕自动熄灭后再次操作旋钮即可唤醒。
+
+## esp32s3-st7796-480_320-xpt2046-ec11
+
+![MKS TS35 V2.0](screenshots/boards/esp32s3_st7796_ec11.png)
+
+*本机型的典型板子——MKS TS35 V2.0：480×320 ST7796S 屏 + XPT2046 电阻触摸，板载 EC11 旋钮。*
+
+与 esp32s3-st7789-320_240-ec11 **同款 ESP32-S3-DevKitC-1 N16R8 底座**的 480×320 电阻屏机型：ST7796S SPI 屏与 XPT2046 触摸**共用一条 SPI 总线**，EC11 旋钮沿用不变的参考引脚。逻辑分辨率 **480×320 横屏**（与 E32R35T 同一布局档）。出厂触摸校准已内置（沿用 E32R35T 真机数据，同为 XPT2046 电阻屏方案）；个体差异可用串口 CLI `caltouch` 强制重校，校准结果存 `touch.json`，之后开机直接加载。
+
+| 模块引脚 | 接到 ESP32-S3 | 用途 |
+|---|---|---|
+| SCK | GPIO21 | SPI 时钟——屏 + 触摸共用 |
+| MOSI（SDA / DIN） | GPIO47 | SPI 数据出——屏数据 + 触摸 DIN 共用 |
+| MISO（DOUT） | GPIO2 | SPI 数据入——XPT2046 坐标回读 |
+| TFT_CS | GPIO41 | 屏幕片选 |
+| TFT_DC（RS / A0） | GPIO40 | 数据/命令选择 |
+| TOUCH_CS | GPIO1 | 触摸芯片片选 |
+| RST / RES | GPIO45 | 屏幕复位；可省——接 3.3V 常高或共用 MCU 复位（驱动内另有软件复位） |
+| BL / LED / BLK | GPIO42 | 背光，高电平点亮（LEDC PWM） |
+| TOUCH_INT（T_IRQ） | — | 悬空不接——驱动轮询不依赖中断，触摸唤醒/点击/滑动全部照常 |
+| EC11 CLK / A | GPIO13 | 编码器 A 相 |
+| EC11 DT / B | GPIO14 | 编码器 B 相 |
+| EC11 SW / KEY | GPIO46 | 旋钮按下 |
+| EC11 + / VCC | 3V3 | 模块供电 |
+| EC11 GND / C | GND | A/B/SW 公共端接地 |
+| 息屏按钮（外挂） | GPIO39 ── 按键 ── GND | 一键息屏/唤醒，内部上拉、低电平有效；板载 BOOT 键（GPIO0）功能相同 |
+
+开发板从 USB-C 供电。触摸与旋钮可同时使用——触摸走指针手势，旋钮走焦点导航。显示镜像/旋转沿用 E32R35T 同款面板的实测默认值；个别单元画面颠倒时，在 **设置 → 显示 → 180° 旋转** 里切换即可，不用改接线。
 
 ## JC8048W550
 

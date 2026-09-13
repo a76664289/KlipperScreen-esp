@@ -1,9 +1,18 @@
 /*
- * BSP: CYD ESP32-2432S028R（2.8" 240x320 ILI9341 + XPT2046 电阻触摸）
- * 逻辑分辨率 320x240 横屏。
+ * BSP: esp32s3-st7796-480_320-xpt2046-ec11
+ *   ESP32-S3-DevKitC-1 N16R8 + 480x320 ST7796S SPI 屏 + XPT2046 电阻触摸 + EC11 旋钮。
+ *
+ * 引脚以 esp32s3-st7789-320_240-ec11 官方接线为基准扩展：
+ *   - 屏与 XPT2046 触摸**共用**一条 SPI 总线（SCK/MOSI/MISO 共用，各自 CS）
+ *   - 新增 MISO（触摸 DOUT 回读）与 TOUCH_CS 两个引脚，其余全部对齐 st7789 板
+ *   - EC11 由共享 bsp_input_init() 按 sdkconfig 创建（A=13/B=14/SW=46），本 BSP 不管
+ *   - RST 可省：接 3.3V 常高或与 MCU EN 共用复位（驱动 reset() 走软件复位）
+ * 息屏/唤醒按钮：板载 BOOT 键（GPIO0）+ 外挂按钮（GPIO39，低电平有效）。
+ * 显示初始化序列与 E32R35T 同款面板一致；mirror 组合沿用 E32R35T 实测值，
+ * 方向不对的个体改 bsp_disp_set_rotate180 的默认镜像或在设置里开 180° 旋转。
  */
 #include "sdkconfig.h"
-#if CONFIG_BOARD_CYD_2432S028R
+#if CONFIG_BOARD_ESP32S3_ST7796_EC11
 
 #include "bsp.h"
 #include "bsp_screen_power.h"
@@ -19,7 +28,7 @@
 #include "driver/spi_master.h"
 #include "esp_check.h"
 #include "esp_heap_caps.h"
-#include "esp_lcd_ili9341.h"
+#include "esp_lcd_st7796.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch_xpt2046.h"
@@ -32,28 +41,26 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
-/* ---------- 引脚定义（2432S028R 官方原理图） ---------- */
-/* LCD 走 SPI2；触摸 XPT2046 在独立总线 SPI3（实测共享总线接法 MISO 全零无应答） */
-#define PIN_LCD_SCLK   14
-#define PIN_LCD_MOSI   13
-#define PIN_LCD_MISO   12
-#define PIN_LCD_CS     15
-#define PIN_LCD_DC     2
-#define PIN_LCD_RST    4
-#define PIN_LCD_BL     21
-#define PIN_TP_SCLK    25
-#define PIN_TP_MOSI    32
-#define PIN_TP_MISO    39
-#define PIN_TOUCH_CS   33
-#define PIN_TOUCH_IRQ  36
-#define PIN_BTN_BOOT    0   /* 板载 BOOT 键：按下息屏，再按唤醒 */
+/* ---------- 引脚定义（基准：esp32s3-st7789-320_240-ec11 官方接线） ---------- */
+/* LCD 与 XPT2046 触摸共用 SPI2 总线（SCLK/MOSI/MISO 共用，各自 CS） */
+#define PIN_LCD_SCLK   21    /* 屏 + 触摸共用 */
+#define PIN_LCD_MOSI   47    /* 屏数据 + 触摸 DIN 共用 */
+#define PIN_LCD_MISO   2     /* 新增：XPT2046 DOUT 坐标回读 */
+#define PIN_LCD_CS     41
+#define PIN_LCD_DC     40    /* RS/A0 */
+#define PIN_LCD_RST    45    /* 可省：接 3.3V 常高或共用 MCU 复位 */
+#define PIN_LCD_BL     42
+#define PIN_TOUCH_CS   1     /* 新增：触摸芯片片选 */
+#define PIN_TOUCH_IRQ  GPIO_NUM_NC   /* TOUCH_INT 悬空不接：驱动轮询，唤醒/点击/滑动不依赖中断 */
+#define PIN_BTN_BOOT   0
+#define PIN_BTN_SLEEP  39    /* 外挂息屏按钮 ── 按键 ── GND，低电平有效 */
 
-#define LCD_H_RES      320   /* 横屏逻辑分辨率 */
-#define LCD_V_RES      240
+#define LCD_H_RES      480   /* 横屏逻辑分辨率 */
+#define LCD_V_RES      320
 #define LCD_SPI_HZ     (40 * 1000 * 1000)
 #define DRAW_BUF_LINES 40
 
-/* 触摸校准十字在屏幕上的位置与间距（与参考实现一致） */
+/* 触摸校准十字在屏幕上的位置与间距 */
 #define CAL_P1_X  10
 #define CAL_P1_Y  10
 #define CAL_P2_X  (LCD_H_RES - 10)
@@ -69,17 +76,18 @@ void bsp_lvgl_lock(void)   { xSemaphoreTakeRecursive(lvgl_mux, portMAX_DELAY); }
 void bsp_lvgl_unlock(void) { xSemaphoreGiveRecursive(lvgl_mux); }
 
 /* ---------- 触摸校准（两点线性映射，原始 ADC → 屏幕坐标，LittleFS JSON 持久化） ---------- */
-/* 参考 .reff/esp32-touchscreen-stepper-driver：斜率带符号，镜像由校准自动吸收，
-   因此驱动层不做 swap/mirror，直接取 12bit 原始 ADC 值。 */
+/* 与 E32R35T 同一约定：斜率带符号，镜像由校准自动吸收，驱动层不做 swap/mirror。
+   本板无真机提取的出厂默认值：touch.json 缺失/损坏即进入两点校准流程。 */
 typedef struct {
     float xm, xc;   /* screen_x = raw_x * xm + xc */
     float ym, yc;   /* screen_y = raw_y * ym + yc */
 } touch_cal_t;
 
-/* 本机型（2432S028R）出厂默认值，从真机校准结果提取；
-   文件缺失/损坏时回写该值并直接使用，不会进入校准流程 */
+/* 出厂默认值：直接沿用 E32R35T 真机两点校准结果（同款 XPT2046 电阻屏方案，
+   touch.json：{"xCalM":0.13023783,"yCalM":0.08733624,"xCalC":-30.89468,"yCalC":-17.94760}）。
+   文件缺失/损坏时回写该值并直接使用；个体偏差大时用 CLI `caltouch` 强制重校 */
 #define TOUCH_CAL_DEFAULT \
-    { -0.081585079f, 325.2913818f, -0.062754944f, 246.2943268f }
+    { 0.13023783266544342f, -30.894680023193359f, 0.0873362421989441f, -17.947597503662109f }
 
 #define TOUCH_CAL_PATH       "/littlefs/touch.json"
 #define TOUCH_CAL_FORCE_PATH "/littlefs/.caltouch"   /* CLI caltouch 写入的强制校准标记 */
@@ -92,9 +100,8 @@ static bool tp_read_raw(uint16_t *x, uint16_t *y)
     uint8_t count = 0;
     esp_lcd_touch_read_data(touch_handle);
     if (esp_lcd_touch_get_data(touch_handle, pt, &count, 1) == ESP_OK && count > 0) {
-        /* 本机横屏安装下面板 raw 轴与屏幕轴交叉：驱动读出的 x 沿屏幕短轴（纵向），
-           y 沿长轴（横向）。在这里交换，使 *x 恒为屏幕水平轴原始值，
-           与默认校准 JSON（xCal 对应 320 长轴、yCal 对应 240 短轴）保持一致 */
+        /* 交换后 *x 恒为屏幕水平（长）轴原始值、*y 为垂直（短）轴原始值。
+           轴向/镜像最终由两点校准吸收 */
         *x = pt[0].y;
         *y = pt[0].x;
         return true;
@@ -157,7 +164,8 @@ static bool touch_cal_load(void)
         }
         ESP_LOGW(TAG, "touch cal file invalid, rewriting factory default");
     } else {
-        /* 首次启动：写入出厂默认值，不进校准流程 */
+        /* 首次启动：写入出厂默认值，不进校准流程。
+           注意：此后删文件重启也只会回到这里重写默认值，重校请用 CLI `caltouch` */
         ESP_LOGW(TAG, "touch cal not found, writing factory default");
     }
     /* 缺失或损坏：tcal 已是出厂默认值，落盘即可 */
@@ -242,7 +250,7 @@ static void touch_cal_run(void)
 }
 
 /* ---------- 开机动画推屏（boot_anim 经 bsp.h 调用，LVGL 锁由调用方持有） ---------- */
-/* esp_lcd_panel_draw_bitmap 是 DMA 异步传输：必须等 on_color_trans_done 再释放/复用
+/* esp_lcd_panel_draw_bitmap 是 DMA 异步传输：必须等 on_color_trans_done 再复用
    像素缓冲，否则 DMA 读到被覆写的内存，画面出现 Y 向条状撕裂 */
 static SemaphoreHandle_t lcd_trans_done;
 
@@ -257,15 +265,19 @@ static bool on_color_trans_done(esp_lcd_panel_io_handle_t io,
 
 void bsp_lcd_push(int x, int y, int w, int h, const uint16_t *px)
 {
-    /* ILI9341 走 SPI 要求先发像素高字节：拷一份交换字节再推（动画核心缓冲要复用，不能就地改） */
+    /* ST7796 走 SPI 要求先发像素高字节。就地交换→推→等 DMA 完成→交换还原，
+       不拷临时副本（同 E32R35T 的做法与原因） */
+    uint16_t *p = (uint16_t *)px;   /* 还原后内容不变，语义上仍是 const */
     size_t n = (size_t)w * h;
-    uint16_t *tmp = malloc(n * 2);
-    if (!tmp) return;
-    for (size_t i = 0; i < n; i++) tmp[i] = (uint16_t)((px[i] >> 8) | (px[i] << 8));
+    for (size_t i = 0; i < n; i++) p[i] = (uint16_t)((p[i] >> 8) | (p[i] << 8));
     xSemaphoreTake(lcd_trans_done, 0);   /* 排掉 LVGL flush 可能留下的存量信号 */
-    esp_lcd_panel_draw_bitmap(panel_handle, x, y, x + w, y + h, tmp);
-    xSemaphoreTake(lcd_trans_done, pdMS_TO_TICKS(500));
-    free(tmp);
+    esp_err_t err = esp_lcd_panel_draw_bitmap(panel_handle, x, y, x + w, y + h, p);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "lcd_push draw err %s: %d,%d %dx%d", esp_err_to_name(err), x, y, w, h);
+    } else if (xSemaphoreTake(lcd_trans_done, pdMS_TO_TICKS(500)) != pdTRUE) {
+        ESP_LOGW(TAG, "lcd_push wait timeout: %d,%d %dx%d", x, y, w, h);
+    }
+    for (size_t i = 0; i < n; i++) p[i] = (uint16_t)((p[i] >> 8) | (p[i] << 8));   /* 还原 */
 }
 
 void bsp_delay_ms(uint32_t ms)
@@ -276,7 +288,7 @@ void bsp_delay_ms(uint32_t ms)
 /* ---------- 反色 / 180° 旋转（运行时生效，设置项由 app 层落盘/回读） ---------- */
 static bool disp_rot180;
 
-bool bsp_disp_can_invert(void)   { return true; }
+bool bsp_disp_can_invert(void)    { return true; }
 bool bsp_disp_can_rotate180(void) { return true; }
 
 void bsp_disp_set_invert(bool en)
@@ -287,21 +299,17 @@ void bsp_disp_set_invert(bool en)
 void bsp_disp_set_rotate180(bool en)
 {
     disp_rot180 = en;
-    /* 默认 mirror(true,true)；180° = 两轴都翻 → mirror(false,false)。
-       swap_xy 下 mirror 参数仍指面板轴，两轴同翻与 swap 无关 */
+    /* 默认 mirror(true,true)（沿用 E32R35T 实测值）；180° = 两轴都翻 */
     if (panel_handle) esp_lcd_panel_mirror(panel_handle, !en, !en);
 }
 
 /* 板级背光实现：本板非零占空比至少 5%，逻辑亮度与息屏状态由公共状态机管理。 */
-static uint8_t bl_duty = 255;
-
 static void backlight_apply(int pct)
 {
     if (pct < 0) pct = 0;
     if (pct > 100) pct = 100;
     if (pct > 0 && pct < 5) pct = 5;
-    bl_duty = (uint8_t)(pct * 255 / 100);
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, bl_duty);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (uint32_t)(pct * 255 / 100));
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
 }
 
@@ -320,7 +328,6 @@ void bsp_fade_out(uint32_t ms)
     }
     ledc_set_fade_with_time(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0, ms);
     ledc_fade_start(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, LEDC_FADE_WAIT_DONE);
-    bl_duty = 0;
 
     /* 渐暗后把 GRAM 整屏推黑：否则面板寄存器残留旧帧，下次上电瞬间会闪一下旧画面。
        不保留任何常驻缓冲：栈上现场填一行全 0，逐行推完即释放 */
@@ -334,11 +341,9 @@ void bsp_fade_out(uint32_t ms)
 }
 
 /* ---------- LVGL 对接 ---------- */
-
 static void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
-    /* ILI9341 走 SPI 要求先发像素高字节，LVGL 内存是小端 RGB565 → 就地交换字节。
-       （不用 LV_COLOR_FORMAT_RGB565_SWAPPED：该格式在本版 LVGL 渲染路径上有问题，实测雪花屏） */
+    /* ST7796 走 SPI 要求先发像素高字节，LVGL 内存是小端 RGB565 → 就地交换字节 */
     uint16_t *p = (uint16_t *)px_map;
     int32_t n = (int32_t)(area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1);
     for (int32_t i = 0; i < n; i++) p[i] = (uint16_t)((p[i] >> 8) | (p[i] << 8));
@@ -367,8 +372,7 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         last_valid_us = esp_timer_get_time();
         pressing = true;
     } else if (pressing && esp_timer_get_time() - last_valid_us < 50 * 1000) {
-        /* 滑动中压力/采样瞬时丢失（Z 阈值或有效采样数不足）时，桥接为仍按住。
-           否则 LVGL 看到 PRESSED→RELEASED 跳变，会把滑动手势拆成一串点按 */
+        /* 滑动中压力/采样瞬时丢失时桥接为仍按住，否则手势被拆成一串点按 */
         rx = last_rx;
         ry = last_ry;
     } else {
@@ -394,21 +398,12 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 
 static void lvgl_task(void *arg)
 {
-    /* 堆低水位监控：free 创新低的整 KB 时打 WARN，定位内存泄漏/OOM（WDT 前兆） */
-    size_t low_mark = (size_t)-1;
     for (;;) {
         bsp_lvgl_lock();
         lv_timer_handler();
         bsp_screen_power_poll();
         bsp_sleep_button_poll();
         bsp_lvgl_unlock();
-        size_t free_kb = esp_get_free_heap_size() / 1024;
-        if (free_kb < low_mark) {
-            low_mark = free_kb;
-            ESP_LOGW(TAG, "heap low: free=%uKB min_ever=%uKB largest_blk=%uB",
-                     (unsigned)free_kb, (unsigned)(esp_get_minimum_free_heap_size() / 1024),
-                     (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
-        }
         vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
@@ -426,8 +421,7 @@ void bsp_init(void)
         nvs_flash_init();
     }
 
-    /* LittleFS：挂载 storage 分区到 /littlefs，存放 touch.json 触摸校准参数
-       （storage 分区出厂为空，首次启动自动格式化） */
+    /* LittleFS：挂载 storage 分区到 /littlefs，存放 touch.json 触摸校准参数 */
     esp_vfs_littlefs_conf_t fs_conf = {
         .base_path = "/littlefs",
         .partition_label = "storage",
@@ -436,7 +430,7 @@ void bsp_init(void)
     };
     ESP_ERROR_CHECK(esp_vfs_littlefs_register(&fs_conf));
 
-    /* 背光：LEDC PWM（GPIO21，高电平点亮），亮度由 bsp_set_brightness 调节 */
+    /* 背光：LEDC PWM（GPIO42，高电平点亮），亮度由 bsp_set_brightness 调节 */
     ledc_timer_config_t bl_timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .duty_resolution = LEDC_TIMER_8_BIT,
@@ -456,7 +450,7 @@ void bsp_init(void)
     ESP_ERROR_CHECK(ledc_channel_config(&bl_ch));
     bsp_screen_power_init(backlight_apply, screen_now_ms);
 
-    /* SPI2 总线（LCD） */
+    /* SPI2 总线（LCD + XPT2046 触摸共用） */
     spi_bus_config_t buscfg = {
         .sclk_io_num = PIN_LCD_SCLK,
         .mosi_io_num = PIN_LCD_MOSI,
@@ -467,17 +461,7 @@ void bsp_init(void)
     };
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
-    /* SPI3 总线（触摸 XPT2046，低速，无需 DMA） */
-    spi_bus_config_t tp_buscfg = {
-        .sclk_io_num = PIN_TP_SCLK,
-        .mosi_io_num = PIN_TP_MOSI,
-        .miso_io_num = PIN_TP_MISO,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-    };
-    ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &tp_buscfg, SPI_DMA_DISABLED));
-
-    /* LCD panel IO + ILI9341 */
+    /* LCD panel IO + ST7796 */
     esp_lcd_panel_io_handle_t io_handle;
     esp_lcd_panel_io_spi_config_t io_cfg = {
         .dc_gpio_num = PIN_LCD_DC,
@@ -497,21 +481,23 @@ void bsp_init(void)
 
     esp_lcd_panel_dev_config_t panel_cfg = {
         .reset_gpio_num = PIN_LCD_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,   /* 面板 BGR 原生（对照 TFT_eSPI ILI9341_2 驱动实测） */
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,   /* 面板 BGR 原生（对照 TFT_eSPI ST7796 驱动） */
         .bits_per_pixel = 16,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(io_handle, &panel_cfg, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st7796(io_handle, &panel_cfg, &panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
-    /* 横屏 320x240；swap_xy 后屏幕水平轴对应面板 Y 轴，水平镜像要翻 mirror_y */
+    /* 默认不开反色（ST7796 开了呈底片）；反色是运行时开关（bsp_disp_set_invert） */
+    ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_handle, false));
+    /* 横屏 480x320，mirror 沿用 E32R35T 实测组合 */
     ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel_handle, true));
     ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel_handle, true, true));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
-    /* 触摸 XPT2046：取原始 ADC，不做驱动层坐标换算/镜像（由两点校准吸收） */
+    /* 触摸 XPT2046：与 LCD 共用 SPI2；取原始 ADC，不做驱动层坐标换算/镜像（由两点校准吸收） */
     esp_lcd_panel_io_handle_t tp_io;
     esp_lcd_panel_io_spi_config_t tp_io_cfg = ESP_LCD_TOUCH_IO_SPI_XPT2046_CONFIG(PIN_TOUCH_CS);
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI3_HOST, &tp_io_cfg, &tp_io));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST, &tp_io_cfg, &tp_io));
 
     esp_lcd_touch_config_t tp_cfg = {
         .x_max = 4096,   /* 原始 12bit ADC 空间 */
@@ -539,19 +525,24 @@ void bsp_init(void)
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev, touch_read_cb);
 
-    /* touch_cal_load 在文件缺失/损坏时回写出厂默认值并返回 true；
-       CLI `caltouch` 写强制标记重启后才走 touch_cal_run() 两点校准 */
+    /* 校准文件缺失/损坏时 touch_cal_load 自动落盘出厂默认值（沿用 E32R35T 真机数据），
+       正常情况下不进校准；CLI `caltouch` 写强制标记重启后才走 touch_cal_run() */
     if (!touch_cal_load()) {
         touch_cal_run();
     }
 
-    /* BOOT 键 = 息屏/唤醒按钮（低电平有效，内部上拉） */
-    const bsp_sleep_button_cfg_t sleep_btns[] = {{ PIN_BTN_BOOT, true }};
-    ESP_ERROR_CHECK(bsp_sleep_button_init(sleep_btns, 1));
+    /* 息屏/唤醒按钮（BOOT + GPIO39 外挂按钮，低电平有效） */
+    const bsp_sleep_button_cfg_t sleep_btns[] = {
+        { PIN_BTN_BOOT, true },
+        { PIN_BTN_SLEEP, true },
+    };
+    ESP_ERROR_CHECK(bsp_sleep_button_init(sleep_btns,
+                                          sizeof(sleep_btns) / sizeof(sleep_btns[0])));
 
     xTaskCreatePinnedToCore(lvgl_task, "lvgl", 12288, NULL, 4, NULL, 1);
 
-    ESP_LOGI(TAG, "BSP ready (2432S028R, %dx%d)", LCD_H_RES, LCD_V_RES);
+    ESP_LOGI(TAG, "BSP ready (esp32s3-st7796-480_320-xpt2046-ec11, %dx%d)",
+             LCD_H_RES, LCD_V_RES);
 }
 
 void bsp_restart(void)
@@ -562,4 +553,4 @@ void bsp_restart(void)
     esp_restart();
 }
 
-#endif /* CONFIG_BOARD_CYD_2432S028R */
+#endif /* CONFIG_BOARD_ESP32S3_ST7796_EC11 */
