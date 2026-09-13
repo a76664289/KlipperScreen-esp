@@ -139,9 +139,16 @@ jobs:
 
       - name: Download esptool (Windows standalone)
         run: |
-          TAG=$(curl -s https://api.github.com/repos/espressif/esptool/releases/latest | jq -r .tag_name)
+          # GitHub API 匿名限流时拿不到 latest 标签：重试，失败则回退到固定版本
+          TAG=$(curl -sf --retry 5 --retry-all-errors \
+                https://api.github.com/repos/espressif/esptool/releases/latest | jq -r .tag_name) || TAG=""
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            TAG=v5.4.0
+            echo "GitHub API unavailable, falling back to esptool $TAG"
+          fi
           echo "esptool $TAG"
-          curl -L -o /tmp/esptool.zip "https://github.com/espressif/esptool/releases/download/${TAG}/esptool-${TAG}-windows-amd64.zip"
+          curl -fL --retry 5 --retry-all-errors -o /tmp/esptool.zip \
+            "https://github.com/espressif/esptool/releases/download/${TAG}/esptool-${TAG}-windows-amd64.zip"
           unzip -o /tmp/esptool.zip -d /tmp/esptool
           find /tmp/esptool -name esptool.exe -exec cp {} dist/ \;
 
