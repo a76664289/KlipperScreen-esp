@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 11 个板型按芯片合并为 2 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
+  # 12 个板型按芯片合并为 3 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
   # 共享按 shard 分开的 ccache。单板构建失败不中断其余板型：收集失败列表，
   # 上传可用的部分产物与失败日志后，在末尾令 shard 失败。
   firmware:
@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [esp32, esp32s3]
+        shard: [esp32, esp32s3, esp32c3]
     steps:
       - uses: actions/checkout@v4
 
@@ -67,6 +67,11 @@ jobs:
           jc8048w550|build-jc8048w550|sdkconfig.jc8048w550|sdkconfig.defaults;sdkconfig.defaults.jc8048w550|esp32s3|16MB|0x0
           esp32s3-JLC-SZP|build-esp32s3-jlc-szp|sdkconfig.esp32s3-JLC-SZP|sdkconfig.defaults;sdkconfig.defaults.esp32s3-JLC-SZP|esp32s3|16MB|0x0
           esp32s3-retro-go|build-esp32s3-retro-go|sdkconfig.esp32s3-retro-go|sdkconfig.defaults;sdkconfig.defaults.esp32s3-retro-go|esp32s3|16MB|0x0
+          EOF
+              ;;
+            esp32c3)
+              cat <<'EOF'
+          esp32c3-st7789-320_240-ec11|build-esp32c3-st7789-ec11|sdkconfig.esp32c3-st7789-320_240-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32c3-st7789-320_240-ec11|esp32c3|4MB|0x0
           EOF
               ;;
             esac
@@ -126,7 +131,7 @@ jobs:
             exit 1
           fi
 
-  # 11 个板型统一打包：只下载两个 shard 聚合 artifact，esptool 只下载一次，
+  # 12 个板型统一打包：只下载三个 shard 聚合 artifact，esptool 只下载一次，
   # 每个 board 生成与逐板打包完全等价的平铺刷机目录
   package:
     runs-on: ubuntu-latest
@@ -143,6 +148,11 @@ jobs:
         with:
           name: firmware-esp32s3
           path: fw/esp32s3
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-esp32c3
+          path: fw/esp32c3
 
       - name: Download esptool (Windows standalone)
         run: |
@@ -162,11 +172,13 @@ jobs:
       - name: Assemble per-board flash packages
         run: |
           set -e
-          BOARDS="cyd_2432s028r e32r35t esp32-st7735s-128_160-ec11 esp32-st7789-320_240-ec11 esp32-ILI9341-320_240-ec11 esp32-ST7796-320_240-ec11 esp32s3-st7789-320_240-ec11 esp32s3-st7796-480_320-xpt2046-ec11 jc8048w550 esp32s3-JLC-SZP esp32s3-retro-go"
+          BOARDS="cyd_2432s028r e32r35t esp32-st7735s-128_160-ec11 esp32-st7789-320_240-ec11 esp32-ILI9341-320_240-ec11 esp32-ST7796-320_240-ec11 esp32s3-st7789-320_240-ec11 esp32s3-st7796-480_320-xpt2046-ec11 esp32c3-st7789-320_240-ec11 jc8048w550 esp32s3-JLC-SZP esp32s3-retro-go"
           for board in $BOARDS; do
             case "$board" in
               cyd_2432s028r|e32r35t|esp32-st7735s-128_160-ec11|esp32-st7789-320_240-ec11|esp32-ILI9341-320_240-ec11|esp32-ST7796-320_240-ec11)
                 shard=esp32 ;;
+              esp32c3-st7789-320_240-ec11)
+                shard=esp32c3 ;;
               *) shard=esp32s3 ;;
             esac
             src="fw/$shard/$board"
@@ -187,7 +199,7 @@ jobs:
             ls "$dest"
           done
           count=$(ls -d pkg/ESP-IDFv5.5-* | wc -l)
-          [ "$count" -eq 11 ] || { echo "::error::expected 11 board packages, got $count"; exit 1; }
+          [ "$count" -eq 12 ] || { echo "::error::expected 12 board packages, got $count"; exit 1; }
 
       # 聚合 package artifact：内部按 ESP-IDFv5.5-<board> 目录划分
       - uses: actions/upload-artifact@v4
@@ -340,7 +352,7 @@ jobs:
         # 文档站板型页的下载链接依赖这一点
         run: |
           count=$(ls -d dl/pkg/ESP-IDFv5.5-* | wc -l)
-          [ "$count" -eq 11 ] || { echo "::error::expected 11 board packages, got $count"; exit 1; }
+          [ "$count" -eq 12 ] || { echo "::error::expected 12 board packages, got $count"; exit 1; }
           for d in dl/pkg/ESP-IDFv5.5-*; do
             b=$(basename "$d")
             (cd "$d" && zip -r "$GITHUB_WORKSPACE/$b.zip" .)

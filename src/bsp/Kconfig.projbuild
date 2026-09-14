@@ -39,6 +39,9 @@ menu "Board selection"
 
         config BOARD_ESP32S3_RETRO_GO
             bool "esp32s3-retro-go (Chaeng retro-go ESP32-S3 掌机, 3.2\" 320x240 ST7789 + GPIO 按键)"
+
+        config BOARD_ESP32C3_ST7789_EC11
+            bool "esp32c3-st7789-320_240-ec11 (ESP32-C3 + 240x320 ST7789 + EC11, 合宙 CORE/Super Mini)"
     endchoice
 
 endmenu
