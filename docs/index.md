@@ -26,6 +26,7 @@ The separately named SDL2 **simulator** uses mock data for layout development, i
 | esp32-st7735s-128_160-ec11 | 1.8" 128×160 ST7735S SPI | None, rotary only | ESP32 | 🆕 New, CYD-compatible pinout |
 | esp32-st7789-320_240-ec11 | 240×320 ST7789 SPI | None, rotary only | ESP32 | 🆕 New, CYD-compatible pinout |
 | esp32-ILI9341-320_240-ec11 | 240×320 ILI9341 SPI | None, rotary only | ESP32 | 🆕 New, CYD-compatible pinout |
+| esp32-ST7796-320_240-ec11 | 240×320 ST7796 SPI | None, rotary only | ESP32 | 🆕 New, CYD-compatible pinout |
 | esp32s3-st7796-480_320-xpt2046-ec11 | 480×320 ST7796S SPI | XPT2046 resistive (shared bus) + EC11 | ESP32-S3 N16R8 | 🆕 New |
 | JC8048W550 | 5" 800×480 ST7262 RGB parallel | GT911 capacitive | ESP32-S3 | ✅ Stable |
 

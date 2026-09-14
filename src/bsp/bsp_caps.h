@@ -4,7 +4,9 @@
 #pragma once
 
 /* BSP_HAS_TOUCH_CAL：板型带电阻触摸层（XPT2046），支持两点校准，
- * 开放 CLI `caltouch` 强制重校；电容屏与无触摸板型为 0 */
+ * 开放 CLI `caltouch` 强制重校；电容屏与无触摸板型为 0
+ * （无触摸纯旋钮板——st7735s/st7789/ILI9341 ec11 机型与
+ *   CONFIG_BOARD_ESP32_ST7796_EC11（esp32-ST7796-320_240-ec11）——走 else = 0） */
 #if defined(CONFIG_BOARD_CYD_2432S028R) || defined(CONFIG_BOARD_E32R35T) || \
     defined(CONFIG_BOARD_ESP32S3_ST7796_EC11)
 #define BSP_HAS_TOUCH_CAL 1

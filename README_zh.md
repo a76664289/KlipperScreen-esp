@@ -58,7 +58,7 @@ ESP-IDF v5.5.5 · LVGL v9.3 · 多后端（ESP32, Windows, Linux, MacOS）
 
 ```bash
 bash tools/build-desktop.sh                       # 桌面端（控制端 + 模拟器）
-bash tools/build-esp32.sh <board> build           # ESP32 固件（10 种板型）
+bash tools/build-esp32.sh <board> build           # ESP32 固件（11 种板型）
 bash tools/build-esp32.sh <board> flash COMx      # 构建并烧录
 ```
 
