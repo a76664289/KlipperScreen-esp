@@ -55,6 +55,14 @@ jobs:
             chip: esp32
             flash_size: 4MB
             bl_offset: 0x1000
+          - board: esp32-ILI9341-320_240-ec11  # ESP32 + 240x320 ILI9341 + EC11（无触摸，引脚对齐 CYD）
+            target: esp32
+            bdir: build-esp32-ili9341-ec11
+            sdkcfg: sdkconfig.esp32-ILI9341-320_240-ec11
+            defs: sdkconfig.defaults;sdkconfig.defaults.esp32-ILI9341-320_240-ec11
+            chip: esp32
+            flash_size: 4MB
+            bl_offset: 0x1000
           - board: esp32s3-st7796-480_320-xpt2046-ec11  # ESP32-S3 + 480x320 ST7796S + XPT2046 + EC11
             target: esp32s3
             bdir: build-esp32s3-st7796-ec11
@@ -137,6 +145,8 @@ jobs:
           - board: esp32-st7735s-128_160-ec11
             suffix: ""
           - board: esp32-st7789-320_240-ec11
+            suffix: ""
+          - board: esp32-ILI9341-320_240-ec11
             suffix: ""
           - board: esp32s3-st7796-480_320-xpt2046-ec11
             suffix: ""

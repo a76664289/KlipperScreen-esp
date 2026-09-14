@@ -7,6 +7,7 @@
 | [esp32s3-st7789-320_240-ec11](#esp32s3-st7789-320_240-ec11) | `esp32s3-st7789-320_240-ec11` | 240×320 ST7789 SPI | None, rotary only | ESP32-S3 N16R8 / 16MB | ✅ Official reference, contributor tested |
 | [esp32-st7735s-128_160-ec11](#esp32-st7735s-128_160-ec11) | `esp32-st7735s-128_160-ec11` | 1.8" 128×160 ST7735S SPI | None, rotary only | ESP32 / 4MB | 🆕 New, CYD-compatible pinout |
 | [esp32-st7789-320_240-ec11](#esp32-st7789-320_240-ec11) | `esp32-st7789-320_240-ec11` | 240×320 ST7789 SPI | None, rotary only | ESP32 / 4MB | 🆕 New, CYD-compatible pinout |
+| [esp32-ILI9341-320_240-ec11](#esp32-ili9341-320_240-ec11) | `esp32-ILI9341-320_240-ec11` | 240×320 ILI9341 SPI | None, rotary only | ESP32 / 4MB | 🆕 New, CYD-compatible pinout |
 | [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) | `esp32s3-st7796-480_320-xpt2046-ec11` | 480×320 ST7796S SPI | XPT2046 resistive (shared bus) + EC11 | ESP32-S3 N16R8 / 16MB | 🆕 New |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB parallel | GT911 capacitive | ESP32-S3 / 16MB | ✅ Stable |
 | [JLC SZP ESP32-S3](#jlc-szp-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 capacitive | ESP32-S3 N16R8 / 16MB | ✅ Verified |
@@ -21,6 +22,7 @@ Flash packages are named `ESP-IDFv5.5-<board>.zip` (asset names carry no version
 | esp32s3-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip) |
 | esp32-st7735s-128_160-ec11 | [ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip) |
 | esp32-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip) |
+| esp32-ILI9341-320_240-ec11 | [ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip) |
 | esp32s3-st7796-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip) |
 | JC8048W550 | [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip) |
 | JLC SZP ESP32-S3 | [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip) |
@@ -180,6 +182,37 @@ A mid-size rotary-only build on the **same ESP32 MCU and the exact same pinout a
 | EC11 C / GND | GND | Common contact of A/B/SW to GND |
 
 ST7789 modules vary between sellers: if the picture is mirrored or shows a coloured offset band at an edge, adjust `LCD_MIRROR_X/Y` and `LCD_GAP_X/Y` at the top of `src/bsp/esp32/bsp_ec11_knob_esp32_st7789.c` and rebuild. Rotation and press provide all navigation, and either action wakes the display after its timeout.
+
+## esp32-ILI9341-320_240-ec11
+
+![ILI9341 240×320 module with EC11 knob](screenshots/boards/esp32_ili9341_320_240_ec11.jpg)
+
+*A 240×320 ILI9341 SPI display with an EC11 encoder knob (shown: an Anycubic Kobra 2 Neo stock display unit). Header pins are usually labelled GND / VCC / SCL / SDA / RES / DC / CS / BLK — `SCL`/`SDA` here are SPI SCLK and MOSI, not I2C.*
+
+A mid-size rotary-only build on the **same ESP32 MCU and the exact same pinout as esp32-st7789-320_240-ec11** (all IO aligned to the CYD 2432S028R): a 240×320 ILI9341 SPI display plus an EC11 encoder, no touch. Logical resolution **320×240 landscape** — the standard layout class, same as the CYD. Only the display panel changes versus the ST7789 build; every wire stays where it is. Reference project: [kobra2neo-klipper](https://github.com/cheadrian/kobra2neo-klipper).
+
+- MCU: ESP32 (dual-core 240MHz, 520KB SRAM), 4MB QIO flash
+- Display: ILI9341 via the esp_lcd driver (BGR panel, normal colour with the default INVOFF — no forced inversion; panel parameters follow the CYD's proven values); SPI2 @ 40MHz, DMA double buffering (2×320×40)
+- Input: EC11 only (PCNT hardware quadrature); no touch layer, never enters touch calibration
+- Backlight: GPIO21, LEDC PWM 8bit/5kHz, active high
+- Screen off / wake: on-board BOOT key (GPIO0)
+
+| Module pin | ESP32 pin | Purpose |
+|---|---|---|
+| ILI9341 VCC | 3V3 | Display power |
+| ILI9341 GND | GND | Ground |
+| ILI9341 SCL / SCK | GPIO14 | SPI clock |
+| ILI9341 SDA / MOSI | GPIO13 | SPI data out |
+| ILI9341 CS | GPIO15 | Chip select |
+| ILI9341 DC / RS | GPIO2 | Data/command select |
+| ILI9341 RST / RES | GPIO4 | Display reset |
+| ILI9341 BL / LED / BLK | GPIO21 | Backlight, active high |
+| EC11 CLK / A | GPIO35 | **Needs an external ~10kΩ pull-up to 3V3** — GPIO35 is input-only with no internal pull-up |
+| EC11 DT / B | GPIO22 | Internal pull-up |
+| EC11 SW / KEY | GPIO27 | Internal pull-up, active-low |
+| EC11 C / GND | GND | Common contact of A/B/SW to GND |
+
+ILI9341 modules vary between sellers: if the picture is mirrored or shows a coloured offset band at an edge, adjust `LCD_MIRROR_X/Y` and `LCD_GAP_X/Y` at the top of `src/bsp/esp32/bsp_esp32_ili9341_ec11.c` and rebuild. Rotation and press provide all navigation, and either action wakes the display after its timeout.
 
 ## esp32s3-st7796-480_320-xpt2046-ec11
 

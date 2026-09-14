@@ -111,7 +111,7 @@ BSP 还有两个配套抽象：
 - Kconfig `choice BOARD`（`src/bsp/Kconfig.projbuild`）定义 `CONFIG_BOARD_*`；`src/bsp/CMakeLists.txt` 注册全部 BSP 源文件，**文件内部用 `#if CONFIG_BOARD_*` 裁剪**（组件注册的第一遍扫描早于 Kconfig 加载，无法按宏选文件）。
 - 每板型独立的 sdkconfig、defaults 文件、分区表和构建目录（芯片目标不同，不能混用）。构建入口 `tools/build-esp32.sh <board>`，细节见 [building.md](building.md)。**注意**：改 `sdkconfig.defaults.<board>` 对已生成的 `sdkconfig.<board>` 不生效，两个文件都要改。
 
-### 4.3 八块板型
+### 4.3 十块板型
 
 | board | 芯片 | 屏幕 | 输入 | 显示路径 |
 |---|---|---|---|---|
@@ -119,6 +119,7 @@ BSP 还有两个配套抽象：
 | `e32r35t` | ESP32 | 3.5" 480×320 ST7796 | XPT2046 电阻触摸 | esp_lcd SPI |
 | `esp32-st7735s-128_160-ec11` | ESP32 | 1.8" 160×128 ST7735S | EC11 旋钮（无触摸） | esp_lcd SPI |
 | `esp32-st7789-320_240-ec11` | ESP32 | 320×240 ST7789 | EC11 旋钮（无触摸） | esp_lcd SPI |
+| `esp32-ILI9341-320_240-ec11` | ESP32 | 320×240 ILI9341 | EC11 旋钮（无触摸） | esp_lcd SPI |
 | `esp32s3-st7789-320_240-ec11` | ESP32-S3 | 2" 320×240 ST7789 | EC11 旋钮（无触摸） | esp_lcd SPI |
 | `esp32s3-st7796-480_320-xpt2046-ec11` | ESP32-S3 | 480×320 ST7796S | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
 | `jc8048w550` | ESP32-S3 | 5" 800×480 RGB 并口 | GT911 电容触摸 | 自研 rgb44（见下） |

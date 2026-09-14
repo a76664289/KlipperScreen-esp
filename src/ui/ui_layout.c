@@ -80,6 +80,8 @@ static int small(void) { return scale_f < 1.0f; }
 #define UI_FONT_SMALL 1   /* 160x128：几何等比缩小，字体走 10/12 小屏档 */
 #elif defined(CONFIG_BOARD_EC11_KNOB_ESP32_ST7789)
 #define UI_FONT_BIG 0   /* 320x240 同 CYD：只链 14/16 压缩档全表 */
+#elif defined(CONFIG_BOARD_ESP32_ILI9341_EC11)
+#define UI_FONT_BIG 0   /* 320x240 同 CYD：只链 14/16 压缩档全表 */
 #elif defined(CONFIG_BOARD_ESP32S3_ST7796_EC11)
 #define UI_FONT_BIG 0   /* 480x320 同 E32R35T：只链 14/16 压缩档全表 */
 #elif defined(CONFIG_BOARD_ESP32S3_RETRO_GO)

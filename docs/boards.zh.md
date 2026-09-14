@@ -7,6 +7,7 @@
 | [esp32s3-st7789-320_240-ec11](#esp32s3-st7789-320_240-ec11) | `esp32s3-st7789-320_240-ec11` | 240×320 ST7789 SPI | 无，纯旋钮 | ESP32-S3 N16R8 / 16MB | ✅ 官方参考，贡献者实机验证 |
 | [esp32-st7735s-128_160-ec11](#esp32-st7735s-128_160-ec11) | `esp32-st7735s-128_160-ec11` | 1.8" 128×160 ST7735S SPI | 无，纯旋钮 | ESP32 / 4MB | 🆕 新机型，引脚兼容 CYD |
 | [esp32-st7789-320_240-ec11](#esp32-st7789-320_240-ec11) | `esp32-st7789-320_240-ec11` | 240×320 ST7789 SPI | 无，纯旋钮 | ESP32 / 4MB | 🆕 新机型，引脚兼容 CYD |
+| [esp32-ILI9341-320_240-ec11](#esp32-ili9341-320_240-ec11) | `esp32-ILI9341-320_240-ec11` | 240×320 ILI9341 SPI | 无，纯旋钮 | ESP32 / 4MB | 🆕 新机型，引脚兼容 CYD |
 | [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) | `esp32s3-st7796-480_320-xpt2046-ec11` | 480×320 ST7796S SPI | XPT2046 电阻（共总线）+ EC11 | ESP32-S3 N16R8 / 16MB | 🆕 新机型 |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB 并口 | GT911 电容 | ESP32-S3 / 16MB | ✅ 稳定 |
 | [立创实战派 ESP32-S3](#立创实战派-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 电容 | ESP32-S3 N16R8 / 16MB | ✅ 已实机验证 |
@@ -21,6 +22,7 @@
 | esp32s3-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip) |
 | esp32-st7735s-128_160-ec11 | [ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip) |
 | esp32-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip) |
+| esp32-ILI9341-320_240-ec11 | [ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip) |
 | esp32s3-st7796-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip) |
 | JC8048W550 | [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip) |
 | 立创实战派 ESP32-S3 | [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip) |
@@ -180,6 +182,37 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | EC11 C / GND | GND | A/B/SW 公共端接地 |
 
 不同卖家的 ST7789 模组有差异：画面镜像或边缘出现彩边/偏移时，改 `src/bsp/esp32/bsp_ec11_knob_esp32_st7789.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 重新编译即可。EC11 的旋转与按下都能导航，屏幕自动熄灭后再次操作旋钮即可唤醒。
+
+## esp32-ILI9341-320_240-ec11
+
+![ILI9341 240×320 模组与 EC11 旋钮](screenshots/boards/esp32_ili9341_320_240_ec11.jpg)
+
+*240×320 ILI9341 SPI 屏搭配 EC11 编码器旋钮（图为纵维立方 Kobra 2 Neo 的原厂显示屏组件）。排针一般印 GND / VCC / SCL / SDA / RES / DC / CS / BLK——这里的 `SCL`/`SDA` 是 SPI 的 SCLK 和 MOSI，不是 I2C。*
+
+与 esp32-st7789-320_240-ec11 **同款主控（ESP32）、完全相同引脚**（全部对齐 CYD 2432S028R）的纯旋钮中屏机型：240×320 ILI9341 SPI 屏 + EC11 编码器，无触摸。逻辑分辨率 **320×240 横屏**——标准布局档，与 CYD 一致。相对 ST7789 机型只是换了一块屏，所有接线原位不动。参考项目：[kobra2neo-klipper](https://github.com/cheadrian/kobra2neo-klipper)。
+
+- 主控：ESP32（双核 240MHz，520KB SRAM），4MB QIO Flash
+- 显示：ILI9341，走 esp_lcd 官方驱动（面板 BGR，默认 INVOFF 即正常颜色，无需强制反色；面板参数沿用 CYD 实测值）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）
+- 输入：仅 EC11（PCNT 硬件正交解码）；无触摸层，不会进入触摸校准
+- 背光：GPIO21，LEDC PWM 8bit/5kHz，高电平点亮
+- 息屏/唤醒：板载 BOOT 键（GPIO0）
+
+| 模块引脚 | ESP32 引脚 | 用途 |
+|---|---|---|
+| ILI9341 VCC | 3V3 | 屏幕供电 |
+| ILI9341 GND | GND | 地 |
+| ILI9341 SCL / SCK | GPIO14 | SPI 时钟 |
+| ILI9341 SDA / MOSI | GPIO13 | SPI 数据输出 |
+| ILI9341 CS | GPIO15 | 片选 |
+| ILI9341 DC / RS | GPIO2 | 数据/命令选择 |
+| ILI9341 RST / RES | GPIO4 | 屏幕复位 |
+| ILI9341 BL / LED / BLK | GPIO21 | 背光，高电平点亮 |
+| EC11 CLK / A | GPIO35 | **需外接 ~10kΩ 上拉到 3V3**——GPIO35 只能输入且无内部上拉 |
+| EC11 DT / B | GPIO22 | 内部上拉 |
+| EC11 SW / KEY | GPIO27 | 内部上拉，低电平有效 |
+| EC11 C / GND | GND | A/B/SW 公共端接地 |
+
+不同卖家的 ILI9341 模组有差异：画面镜像或边缘出现彩边/偏移时，改 `src/bsp/esp32/bsp_esp32_ili9341_ec11.c` 顶部的 `LCD_MIRROR_X/Y` 与 `LCD_GAP_X/Y` 重新编译即可。EC11 的旋转与按下都能导航，屏幕自动熄灭后再次操作旋钮即可唤醒。
 
 ## esp32s3-st7796-480_320-xpt2046-ec11
 

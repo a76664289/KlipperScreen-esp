@@ -8,16 +8,18 @@ Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（M
 
 - 委派的目标若是节省 Codex token，小型、边界清楚的改动默认由当前 Agent 直接完成；不要使用 `Kimi ACP + K3-256k + Thinking Max + 全量流式监控`。一次桌面键盘适配实测让 Kimi 使用约 167k token，同时消耗约 5% Codex 周限额，成本高于直接实现。
 - 用户明确要求使用 Kimi 时，优先调用 `python tools/kimi-delegate.py -p "..."`；它在本地消费 ACP 流，只输出最终答复。默认 `--approval ask`：遇到工具审批或 AskUserQuestion 时只显示一条 `[kimi-request]` 摘要，通过同一进程 stdin 回复选项编号后原 turn 继续；自动策略必须显式传 `--approval reject|allow-once|allow-always`。主 Agent 只读取最终报告、`git diff` 和少量验证结果。不要直接把 `kimi acp` 接到会话终端；确需保留原始协议时才显式传 `--log <path>`，该日志可能很大。
-- 委派启动时会立即输出 `run-id`，并在 `tmp/kimi-delegate-state/` 原子维护限长状态快照；长时间静默时按需调用 `python tools/kimi-delegate.py status --run-id <id> --max-chars 1500`，后续带上上次返回的 `--since <cursor>` 可避免重复内容。快照只含最近可见 Agent 文本、工具状态、审批请求和委派前后 worktree 元数据，不含 thought 或 raw tool output；不要高频轮询，查询结果本身仍会占 Codex 上下文。
+- 委派启动时会立即输出 `run-id`，并在 `tmp/kimi-delegate-state/` 原子维护限长状态快照。监工默认只等待原委派进程的最终输出或 `[kimi-request]`，一次等待 45～60 秒；不要同时查询进程树、包管理器日志或 ACP 状态。若原进程句柄丢失，使用 `python tools/kimi-delegate.py wait --run-id <id> --timeout 55 --quiet-timeout`：它只在完成、失败、取消或需要审批时输出，无变化超时不产生上下文。`status --run-id <id> --max-chars 800 --since <cursor>` 仅用于两轮以上静默、怀疑卡死时的一次性诊断，不作常规轮询。快照不含 thought 或 raw tool output。
 - 推荐默认档位为 `python tools/kimi-delegate.py --thinking low --mode auto --approval ask -p "..."`；低档不足再升 `high`，只有用户明确要求或任务确实需要时才用 `max`。平时不要开 `--verbose` 或 `--log`；长提示词用 `-f <prompt-file>`，需要追问或审批后续接时复用 `--session-id`。提示词只给必要上下文，并要求最终答复简短列出改动文件、验证结果和遗留问题。
 - 主 Agent 验收外部代理时只看最终报告、`git diff --stat`、目标文件 diff、`git diff --check` 和一个针对性 build/smoke；不要把 ACP 的思考流、完整工具输出或无关大 diff 重新灌入上下文。这样才可能真正节省 Codex token；ACP 只是传输协议，本身不保证省 token。
+- 外部命令仍在运行但没有新输出是正常状态，不等于卡死。只有达到委派提示词里的超时/停止条件、代理主动报错，或连续两次低噪声等待后仍需判断是否人工介入，才查看一份限长状态；底层进程和安装日志只在状态明确显示失败且最终报告不足以定位时检查。
+- 状态快照属于非关键旁路：Windows 上目标 JSON 被扫描器或读取进程短暂占用时，中间件会重试并跳过本次快照，绝不能因此终止 ACP turn。中间件若异常退出，优先从快照取 `sessionId` 用 `--session-id` 接续，不重新执行已经完成的工作。
 - `kimi acp` 与 `tools/kimi-delegate.py` 默认使用当前 `KIMI_CODE_HOME`（未设置时为 `~/.kimi-code`）中的 Kimi Code 登录凭证。切换订阅账号要先 `kimi logout` 再 `kimi login`，切换后建议重启 ACP 进程；若要同时隔离多个账号，为每个进程设置不同的 `KIMI_CODE_HOME` 并分别登录，委派工具会继承该环境变量。
 - `Thinking Max` 只用于确有复杂推理需求的任务；常规实现使用低/高档思考。提示词必须写清修改边界、最小验证和停止条件，happy path 已证明后立即收尾，不继续追逐截图时机、动画中间态等非阻塞现象。
 - 委派前后分别检查 `git status --short --branch`；要求外部代理自行清理调试打印、自动 demo、截图和临时文件。验收只做与风险相称的 `git diff --check`、目标构建或一个 smoke check，不因委派自动扩大测试范围。
 
 ## 构建/烧录
 
-- ESP32：`bash tools/build-esp32.sh <board> [flash COMx]`，board ∈ `cyd_2432s028r` / `e32r35t` / `esp32s3-st7789-320_240-ec11`（原 ec11_knob_minimal，S3+ST7789）/ `esp32-st7735s-128_160-ec11`（原 ec11_knob_esp32，ESP32+ST7735S）/ `esp32-st7789-320_240-ec11`（ESP32+ST7789 320x240，引脚同 st7735s 板）/ `esp32s3-st7796-480_320-xpt2046-ec11`（S3+ST7796S+XPT2046 共总线+EC11）/ `jc8048w550` / `esp32s3-JLC-SZP` / `esp32s3-retro-go`（Chaeng retro-go S3 掌机，ST7789+GPIO 按键）/ `all`。烧录前必须先断开串口占用（`mcp__serial-mcp__close_port`），烧后重连（115200）。
+- ESP32：`bash tools/build-esp32.sh <board> [flash COMx]`，board ∈ `cyd_2432s028r` / `e32r35t` / `esp32s3-st7789-320_240-ec11`（原 ec11_knob_minimal，S3+ST7789）/ `esp32-st7735s-128_160-ec11`（原 ec11_knob_esp32，ESP32+ST7735S）/ `esp32-st7789-320_240-ec11`（ESP32+ST7789 320x240，引脚同 st7735s 板）/ `esp32-ILI9341-320_240-ec11`（ESP32+ILI9341 320x240，引脚同 st7789 板）/ `esp32s3-st7796-480_320-xpt2046-ec11`（S3+ST7796S+XPT2046 共总线+EC11）/ `jc8048w550` / `esp32s3-JLC-SZP` / `esp32s3-retro-go`（Chaeng retro-go S3 掌机，ST7789+GPIO 按键）/ `all`。烧录前必须先断开串口占用（`mcp__serial-mcp__close_port`），烧后重连（115200）。
 - 桌面端：`bash tools/build-desktop.sh`。
 - **sdkconfig 大坑**：改 `sdkconfig.defaults.<board>` 对已生成的 `sdkconfig.<board>` 不生效——要改必须两个文件都改（sdkconfig 里翻 canonical 行，注意 `# CONFIG_XXX is not set` 会覆盖 defaults）。
 - IDF 源码在 `C:/esp/v5.5.5/esp-idf`。GitHub 走代理 `curl --proxy http://127.0.0.1:8635`。

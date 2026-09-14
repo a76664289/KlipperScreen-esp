@@ -9,6 +9,7 @@ Examples:
     python tools/kimi-delegate.py -p "Inspect the diff and fix the build"
     python tools/kimi-delegate.py --thinking high --mode auto -f task.txt
     python tools/kimi-delegate.py --session-id SESSION_ID -p "Continue"
+    python tools/kimi-delegate.py wait --run-id RUN_ID --timeout 55 --quiet-timeout
     python tools/kimi-delegate.py status --run-id RUN_ID --max-chars 1500
 
 When Kimi requests permission, the client prints one compact ``[kimi-request]``
@@ -21,6 +22,10 @@ Every run also writes a small, atomic status snapshot under
 loading/replaying the ACP session.  Snapshots contain only bounded visible agent
 text, compact tool states, approvals, and worktree-change metadata; never raw
 tool output or thought chunks.
+
+The ``wait`` subcommand is intended for low-token supervision.  It emits a
+snapshot only when the run completes, fails, is cancelled, or needs permission;
+with ``--quiet-timeout`` an uneventful timeout emits nothing at all.
 """
 
 from __future__ import annotations
@@ -54,6 +59,7 @@ CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 STATE_AGENT_CHARS = 12_000
 STATE_TOOL_COUNT = 8
 STATE_WRITE_INTERVAL = 0.75
+STATE_REPLACE_RETRIES = 6
 
 
 def clean_text(value: Any, limit: int | None = None) -> str:
@@ -176,21 +182,38 @@ class StatusReporter:
     def _atomic_write(self, path: Path, payload: bytes) -> None:
         temp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
         temp.write_bytes(payload)
-        os.replace(temp, path)
+        for attempt in range(STATE_REPLACE_RETRIES):
+            try:
+                os.replace(temp, path)
+                return
+            except PermissionError:
+                # Windows scanners/readers can briefly hold the destination.
+                # A monitoring snapshot must never terminate the ACP turn.
+                if attempt + 1 < STATE_REPLACE_RETRIES:
+                    time.sleep(0.05 * (attempt + 1))
+        try:
+            temp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def write(self, *, force: bool = False) -> None:
         now = time.monotonic()
         if not force and now - self.last_write_mono < STATE_WRITE_INTERVAL:
             return
-        self.state_dir.mkdir(parents=True, exist_ok=True)
         self.data["updatedAt"] = utc_now()
         self.data["elapsedSeconds"] = round(now - self.started_mono, 1)
         self.data["lastAgentText"] = self.agent_tail[-STATE_AGENT_CHARS:]
         self.data["recentTools"] = list(self.tools.values())[-STATE_TOOL_COUNT:]
         payload = json.dumps(self.data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        self._atomic_write(self.state_dir / f"{self.run_id}.json", payload)
-        self._atomic_write(self.state_dir / "latest.json", payload)
-        self.last_write_mono = now
+        try:
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            self._atomic_write(self.state_dir / f"{self.run_id}.json", payload)
+            self._atomic_write(self.state_dir / "latest.json", payload)
+            self.last_write_mono = now
+        except OSError:
+            # Status reporting is deliberately best-effort and non-fatal.
+            # The foreground process still delivers requests and the final reply.
+            return
 
     def _touch(self, *, force: bool = False) -> None:
         self.data["cursor"] = int(self.data.get("cursor", 0)) + 1
@@ -648,10 +671,14 @@ class AcpClient:
             self.log.close()
 
 
-def parse_status_args(argv: list[str]) -> argparse.Namespace:
+def parse_status_args(argv: list[str], *, wait_mode: bool = False) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        prog="kimi-delegate.py status",
-        description="Read one bounded live snapshot without touching the ACP session.")
+        prog=f"kimi-delegate.py {'wait' if wait_mode else 'status'}",
+        description=(
+            "Wait for a bounded actionable snapshot without touching the ACP session."
+            if wait_mode else
+            "Read one bounded live snapshot without touching the ACP session."
+        ))
     parser.add_argument("run", nargs="?", help="run id; defaults to the latest run")
     parser.add_argument("--run-id", dest="run_option", help="run id (same as positional RUN)")
     parser.add_argument("--state-dir", type=Path,
@@ -661,6 +688,13 @@ def parse_status_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--since", type=int,
                         help="return only an unchanged marker when cursor has not advanced")
     parser.add_argument("--json", action="store_true", help="emit bounded JSON")
+    if wait_mode:
+        parser.add_argument("--timeout", type=float, default=300.0,
+                            help="seconds to wait for completion, failure, cancellation, or permission (default: 300)")
+        parser.add_argument("--poll-interval", type=float, default=1.0,
+                            help="snapshot polling interval in seconds (default: 1)")
+        parser.add_argument("--quiet-timeout", action="store_true",
+                            help="emit nothing when the run is still non-actionable at timeout")
     args = parser.parse_args(argv)
     if args.run and args.run_option:
         parser.error("use either positional RUN or --run-id, not both")
@@ -673,6 +707,11 @@ def parse_status_args(argv: list[str]) -> argparse.Namespace:
         parser.error("run id may contain only letters, digits, dot, underscore, and hyphen")
     if len(args.run_id) > 96:
         parser.error("run id must not exceed 96 characters")
+    if wait_mode:
+        if args.timeout < 0 or args.timeout > 86_400:
+            parser.error("--timeout must be between 0 and 86400 seconds")
+        if args.poll_interval < 0.1 or args.poll_interval > 60:
+            parser.error("--poll-interval must be between 0.1 and 60 seconds")
     return args
 
 
@@ -736,21 +775,54 @@ def _bounded_json(payload: dict[str, Any], limit: int) -> str:
     return output
 
 
-def status_main(argv: list[str]) -> int:
-    args = parse_status_args(argv)
+def _read_status_snapshot(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"invalid snapshot: {path}")
+    return data
+
+
+def status_main(argv: list[str], *, wait_mode: bool = False) -> int:
+    args = parse_status_args(argv, wait_mode=wait_mode)
     state_dir = resolve_state_dir(Path.cwd().resolve(), args.state_dir)
     path = state_dir / ("latest.json" if args.run_id == "latest" else f"{args.run_id}.json")
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        print(f"kimi-delegate status: snapshot not found: {path}", file=sys.stderr)
-        return 1
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        print(f"kimi-delegate status: cannot read {path}: {exc}", file=sys.stderr)
-        return 1
-    if not isinstance(data, dict):
-        print(f"kimi-delegate status: invalid snapshot: {path}", file=sys.stderr)
-        return 1
+    deadline = time.monotonic() + (args.timeout if wait_mode else 0)
+    actionable_states = {"completed", "failed", "cancelled", "waiting_permission"}
+    data: dict[str, Any] | None = None
+    while True:
+        try:
+            data = _read_status_snapshot(path)
+        except FileNotFoundError:
+            if not wait_mode or time.monotonic() >= deadline:
+                print(f"kimi-delegate status: snapshot not found: {path}", file=sys.stderr)
+                return 1
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+            print(f"kimi-delegate status: cannot read {path}: {exc}", file=sys.stderr)
+            return 1
+
+        if data is not None:
+            state = str(data.get("state") or "unknown")
+            if not wait_mode or state in actionable_states:
+                break
+            if time.monotonic() >= deadline:
+                if args.quiet_timeout:
+                    return 0
+                cursor = int(data.get("cursor", 0))
+                if args.json:
+                    timeout_payload = {
+                        "runId": data.get("runId"), "state": state,
+                        "cursor": cursor, "timeout": True,
+                    }
+                    print(_bounded_json(timeout_payload, args.max_chars))
+                else:
+                    print(f"[kimi-wait] timeout run={data.get('runId')} "
+                          f"state={state} cursor={cursor}")
+                return 0
+
+        remaining = max(0.0, deadline - time.monotonic())
+        time.sleep(min(args.poll_interval, remaining))
+
+    assert data is not None
 
     cursor = int(data.get("cursor", 0))
     if args.since is not None and cursor <= args.since:
@@ -854,8 +926,8 @@ def main() -> int:
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure:
             reconfigure(encoding="utf-8", errors="replace")
-    if len(sys.argv) > 1 and sys.argv[1] == "status":
-        return status_main(sys.argv[2:])
+    if len(sys.argv) > 1 and sys.argv[1] in ("status", "wait"):
+        return status_main(sys.argv[2:], wait_mode=sys.argv[1] == "wait")
 
     args = parse_args()
     client: AcpClient | None = None
