@@ -28,6 +28,7 @@ Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（M
 ## 发版约定
 
 - 版本号维护在 `src/core/version.h`（`KR_VERSION`，设置页和 Moonraker identify 都用它）；发版 = 改它 + 打同名 `vX.Y.Z` tag 推送。
+- CI 固件按 esp32 / esp32s3 两个 shard 在同一 IDF 容器内顺序合并构建（共享按 shard 分开的 ccache，单板失败不中断其余板型），package 统一为单 Job 聚合产物。
 - CI  release 资产名**不带版本号**：固件 `ESP-IDFv5.5-<board>.zip`、桌面 `desktop-win-x86_64.zip` / `desktop-macos-arm64.zip`（`ESP-IDFv5.5` 是构建框架版本，不表示目标芯片都是 ESP32）；文档站下载直链走 `releases/latest/download/...`；tag 含 `wip` 标为预发布。旧 `klipper-remote-*` 遗留资产由 release job 在新资产上传成功后自动按 id 清理。
 - CI 会强推移动标签 `latest` 到最新正式版提交。
 - `src/ui/CMakeLists.txt` 是 GLOB 收集源文件：新增面板/字体文件后若链接报 undefined，先 touch 它触发 CMake 重配（不能加 CONFIGURE_DEPENDS，IDF script 模式会报错）。

@@ -7,175 +7,140 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 所有支持板型全量构建（矩阵）。每板型独立 build 目录与 sdkconfig（芯片不同）。
+  # 10 个板型按芯片合并为 2 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
+  # 共享按 shard 分开的 ccache。单板构建失败不中断其余板型：收集失败列表，
+  # 上传可用的部分产物与失败日志后，在末尾令 shard 失败。
   firmware:
+    name: firmware (${{ matrix.shard }})
     runs-on: ubuntu-latest
     container: espressif/idf:v5.5.5
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - board: cyd_2432s028r      # CYD 2.8" ESP32
-            target: esp32
-            bdir: build
-            sdkcfg: sdkconfig          # 仓库已有完整文件，免 set-target
-            defs: sdkconfig.defaults;sdkconfig.defaults.cyd_2432s028r
-            chip: esp32
-            flash_size: 4MB
-            bl_offset: 0x1000
-          - board: e32r35t              # ESP32-32E 3.5" E32R35T
-            target: esp32
-            bdir: build-e32r35t
-            sdkcfg: sdkconfig.e32r35t
-            defs: sdkconfig.defaults;sdkconfig.defaults.e32r35t
-            chip: esp32
-            flash_size: 4MB
-            bl_offset: 0x1000
-          - board: esp32s3-st7789-320_240-ec11  # ESP32-S3 + 240x320 ST7789 + EC11（无触摸）
-            target: esp32s3
-            bdir: build-ec11-knob-minimal
-            sdkcfg: sdkconfig.esp32s3-st7789-320_240-ec11
-            defs: sdkconfig.defaults;sdkconfig.defaults.esp32s3-st7789-320_240-ec11
-            chip: esp32s3
-            flash_size: 16MB
-            bl_offset: 0x0
-          - board: esp32-st7735s-128_160-ec11  # ESP32 + 128x160 ST7735S + EC11（无触摸，引脚对齐 CYD）
-            target: esp32
-            bdir: build-ec11-knob-esp32
-            sdkcfg: sdkconfig.esp32-st7735s-128_160-ec11
-            defs: sdkconfig.defaults;sdkconfig.defaults.esp32-st7735s-128_160-ec11
-            chip: esp32
-            flash_size: 4MB
-            bl_offset: 0x1000
-          - board: esp32-st7789-320_240-ec11  # ESP32 + 240x320 ST7789 + EC11（无触摸，引脚对齐 CYD）
-            target: esp32
-            bdir: build-ec11-knob-esp32-st7789
-            sdkcfg: sdkconfig.esp32-st7789-320_240-ec11
-            defs: sdkconfig.defaults;sdkconfig.defaults.esp32-st7789-320_240-ec11
-            chip: esp32
-            flash_size: 4MB
-            bl_offset: 0x1000
-          - board: esp32-ILI9341-320_240-ec11  # ESP32 + 240x320 ILI9341 + EC11（无触摸，引脚对齐 CYD）
-            target: esp32
-            bdir: build-esp32-ili9341-ec11
-            sdkcfg: sdkconfig.esp32-ILI9341-320_240-ec11
-            defs: sdkconfig.defaults;sdkconfig.defaults.esp32-ILI9341-320_240-ec11
-            chip: esp32
-            flash_size: 4MB
-            bl_offset: 0x1000
-          - board: esp32s3-st7796-480_320-xpt2046-ec11  # ESP32-S3 + 480x320 ST7796S + XPT2046 + EC11
-            target: esp32s3
-            bdir: build-esp32s3-st7796-ec11
-            sdkcfg: sdkconfig.esp32s3-st7796-480_320-xpt2046-ec11
-            defs: sdkconfig.defaults;sdkconfig.defaults.esp32s3-st7796-480_320-xpt2046-ec11
-            chip: esp32s3
-            flash_size: 16MB
-            bl_offset: 0x0
-          - board: jc8048w550         # JC8048W550 5" ESP32-S3
-            target: esp32s3
-            bdir: build-jc8048w550
-            sdkcfg: sdkconfig.jc8048w550
-            defs: sdkconfig.defaults;sdkconfig.defaults.jc8048w550
-            chip: esp32s3
-            flash_size: 16MB
-            bl_offset: 0x0
-          - board: esp32s3-JLC-SZP    # 立创实战派 ESP32-S3 2.0" ST7789 + FT6336
-            target: esp32s3
-            bdir: build-esp32s3-jlc-szp
-            sdkcfg: sdkconfig.esp32s3-JLC-SZP
-            defs: sdkconfig.defaults;sdkconfig.defaults.esp32s3-JLC-SZP
-            chip: esp32s3
-            flash_size: 16MB
-            bl_offset: 0x0
-          - board: esp32s3-retro-go   # Chaeng retro-go ESP32-S3 掌机 3.2" ST7789 + GPIO 按键
-            target: esp32s3
-            bdir: build-esp32s3-retro-go
-            sdkcfg: sdkconfig.esp32s3-retro-go
-            defs: sdkconfig.defaults;sdkconfig.defaults.esp32s3-retro-go
-            chip: esp32s3
-            flash_size: 16MB
-            bl_offset: 0x0
+        shard: [esp32, esp32s3]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build ESP32 firmware (${{ matrix.board }})
+      - name: Setup ccache
+        # 镜像自带则直接用；否则尝试安装；都失败则降级为无缓存构建
         run: |
-          # GH Actions 会覆盖容器 entrypoint，idf 环境需手动激活；并修复容器内 git 属主告警
+          if ! command -v ccache >/dev/null 2>&1; then
+            apt-get update && apt-get install -y --no-install-recommends ccache \
+              || echo "::warning::ccache unavailable, building without cache"
+          fi
+          ccache --version || true
+
+      - name: ccache cache (${{ matrix.shard }})
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.shard }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.shard }}-
+
+      # board|build_dir|sdkconfig|sdkconfig_defaults|chip|flash_size|bootloader_offset
+      - name: Build firmware shard (${{ matrix.shard }})
+        env:
+          IDF_CCACHE_ENABLE: "1"
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+        run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           . "$IDF_PATH/export.sh"
+
+          boards_table() {
+            case "${{ matrix.shard }}" in
+            esp32)
+              cat <<'EOF'
+          cyd_2432s028r|build|sdkconfig|sdkconfig.defaults;sdkconfig.defaults.cyd_2432s028r|esp32|4MB|0x1000
+          e32r35t|build-e32r35t|sdkconfig.e32r35t|sdkconfig.defaults;sdkconfig.defaults.e32r35t|esp32|4MB|0x1000
+          esp32-st7735s-128_160-ec11|build-ec11-knob-esp32|sdkconfig.esp32-st7735s-128_160-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32-st7735s-128_160-ec11|esp32|4MB|0x1000
+          esp32-st7789-320_240-ec11|build-ec11-knob-esp32-st7789|sdkconfig.esp32-st7789-320_240-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32-st7789-320_240-ec11|esp32|4MB|0x1000
+          esp32-ILI9341-320_240-ec11|build-esp32-ili9341-ec11|sdkconfig.esp32-ILI9341-320_240-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32-ILI9341-320_240-ec11|esp32|4MB|0x1000
+          EOF
+              ;;
+            esp32s3)
+              cat <<'EOF'
+          esp32s3-st7789-320_240-ec11|build-ec11-knob-minimal|sdkconfig.esp32s3-st7789-320_240-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32s3-st7789-320_240-ec11|esp32s3|16MB|0x0
+          esp32s3-st7796-480_320-xpt2046-ec11|build-esp32s3-st7796-ec11|sdkconfig.esp32s3-st7796-480_320-xpt2046-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32s3-st7796-480_320-xpt2046-ec11|esp32s3|16MB|0x0
+          jc8048w550|build-jc8048w550|sdkconfig.jc8048w550|sdkconfig.defaults;sdkconfig.defaults.jc8048w550|esp32s3|16MB|0x0
+          esp32s3-JLC-SZP|build-esp32s3-jlc-szp|sdkconfig.esp32s3-JLC-SZP|sdkconfig.defaults;sdkconfig.defaults.esp32s3-JLC-SZP|esp32s3|16MB|0x0
+          esp32s3-retro-go|build-esp32s3-retro-go|sdkconfig.esp32s3-retro-go|sdkconfig.defaults;sdkconfig.defaults.esp32s3-retro-go|esp32s3|16MB|0x0
+          EOF
+              ;;
+            esac
+          }
+
           cd src/ports/esp32
-          if [ ! -f "${{ matrix.sdkcfg }}" ]; then
-            idf.py -B "${{ matrix.bdir }}" -DSDKCONFIG="${{ matrix.sdkcfg }}" \
-                   -DSDKCONFIG_DEFAULTS="${{ matrix.defs }}" set-target "${{ matrix.target }}"
-          fi
-          idf.py -B "${{ matrix.bdir }}" -DSDKCONFIG="${{ matrix.sdkcfg }}" \
-                 -DSDKCONFIG_DEFAULTS="${{ matrix.defs }}" build
+          FAILED=""
+          mkdir -p "$GITHUB_WORKSPACE/artifacts/_logs"
 
+          build_one() {
+            board="$1"; bdir="$2"; sdkcfg="$3"; defs="$4"; chip="$5"; flash_size="$6"; bl_offset="$7"
+            log="$GITHUB_WORKSPACE/artifacts/_logs/$board.log"
+            echo "=== [${{ matrix.shard }}] $board (build dir: $bdir) ==="
+            if [ ! -f "$sdkcfg" ]; then
+              idf.py -B "$bdir" -DSDKCONFIG="$sdkcfg" -DSDKCONFIG_DEFAULTS="$defs" \
+                     set-target "${{ matrix.shard }}" >"$log" 2>&1 || return 1
+            fi
+            idf.py -B "$bdir" -DSDKCONFIG="$sdkcfg" -DSDKCONFIG_DEFAULTS="$defs" build >>"$log" 2>&1 || return 1
+            dest="$GITHUB_WORKSPACE/artifacts/$board"
+            mkdir -p "$dest"
+            cp "$bdir/bootloader/bootloader.bin" \
+               "$bdir/partition_table/partition-table.bin" \
+               "$bdir/klipper_remote_display.bin" "$dest/" || return 1
+            # 板型参数随产物走：刷机脚本读 flash.cfg 决定 chip/flash 大小/bootloader 偏移
+            printf 'CHIP=%s\nFLASH_SIZE=%s\nBL_OFFSET=%s\n' "$chip" "$flash_size" "$bl_offset" > "$dest/flash.cfg"
+            rm -f "$log"   # 成功板的构建日志不留档
+          }
+
+          while IFS='|' read -r board bdir sdkcfg defs chip flash_size bl_offset; do
+            [ -n "$board" ] || continue
+            if build_one "$board" "$bdir" "$sdkcfg" "$defs" "$chip" "$flash_size" "$bl_offset"; then
+              echo "OK: $board"
+            else
+              echo "::error::board $board build failed, log tail:"
+              tail -n 80 "$GITHUB_WORKSPACE/artifacts/_logs/$board.log" || true
+              FAILED="$FAILED $board"
+            fi
+          done < <(boards_table)
+
+          : > "$GITHUB_WORKSPACE/failed.txt"
+          for b in $FAILED; do echo "$b" >> "$GITHUB_WORKSPACE/failed.txt"; done
+          echo "shard ${{ matrix.shard }} done; failed boards:${FAILED:- none}"
+          ccache -s || true
+
+      # 聚合 artifact：按 board 分目录（bootloader/partition-table/klipper_remote_display/flash.cfg），
+      # _logs/ 下只有失败板的完整构建日志
       - uses: actions/upload-artifact@v4
         with:
-          name: firmware-bins-${{ matrix.board }}
-          path: |
-            src/ports/esp32/${{ matrix.bdir }}/bootloader/bootloader.bin
-            src/ports/esp32/${{ matrix.bdir }}/partition_table/partition-table.bin
-            src/ports/esp32/${{ matrix.bdir }}/klipper_remote_display.bin
+          name: firmware-${{ matrix.shard }}
+          path: artifacts/
+          if-no-files-found: warn
 
-      # 板型参数随产物走：刷机脚本读 flash.cfg 决定 chip/flash 大小/bootloader 偏移
-      - name: flash.cfg
+      - name: Report failed boards
         run: |
-          printf 'CHIP=%s\nFLASH_SIZE=%s\nBL_OFFSET=%s\n' \
-            "${{ matrix.chip }}" "${{ matrix.flash_size }}" "${{ matrix.bl_offset }}" > flash.cfg
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flash-cfg-${{ matrix.board }}
-          path: flash.cfg
+          if [ -s failed.txt ]; then
+            echo "::error::shard ${{ matrix.shard }} failed boards: $(paste -sd' ' failed.txt)"
+            exit 1
+          fi
 
+  # 10 个板型统一打包：只下载两个 shard 聚合 artifact，esptool 只下载一次，
+  # 每个 board 生成与逐板打包完全等价的平铺刷机目录
   package:
     runs-on: ubuntu-latest
     needs: firmware
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - board: cyd_2432s028r
-            suffix: ""
-          - board: e32r35t
-            suffix: ""
-          - board: esp32s3-st7789-320_240-ec11
-            suffix: ""
-          - board: esp32-st7735s-128_160-ec11
-            suffix: ""
-          - board: esp32-st7789-320_240-ec11
-            suffix: ""
-          - board: esp32-ILI9341-320_240-ec11
-            suffix: ""
-          - board: esp32s3-st7796-480_320-xpt2046-ec11
-            suffix: ""
-          - board: jc8048w550
-            suffix: ""
-          - board: esp32s3-JLC-SZP
-            suffix: ""
-          - board: esp32s3-retro-go
-            suffix: ""
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
         with:
-          name: firmware-bins-${{ matrix.board }}
-          path: dist
+          name: firmware-esp32
+          path: fw/esp32
 
       - uses: actions/download-artifact@v4
         with:
-          name: flash-cfg-${{ matrix.board }}
-          path: dist
-
-      - name: Flatten artifact layout
-        # upload-artifact 保留目录层级，下载后需拍平成刷机脚本期望的平铺结构
-        run: |
-          mv dist/bootloader/bootloader.bin dist/
-          mv dist/partition_table/partition-table.bin dist/
-          rmdir dist/bootloader dist/partition_table
-          ls -la dist
+          name: firmware-esp32s3
+          path: fw/esp32s3
 
       - name: Download esptool (Windows standalone)
         run: |
@@ -190,25 +155,43 @@ jobs:
           curl -fL --retry 5 --retry-all-errors -o /tmp/esptool.zip \
             "https://github.com/espressif/esptool/releases/download/${TAG}/esptool-${TAG}-windows-amd64.zip"
           unzip -o /tmp/esptool.zip -d /tmp/esptool
-          find /tmp/esptool -name esptool.exe -exec cp {} dist/ \;
+          find /tmp/esptool -name esptool.exe -exec cp {} /tmp/esptool.exe \;
 
-      - name: Add flash scripts
+      - name: Assemble per-board flash packages
         run: |
-          cp tools/release/flash.bat tools/release/flash.sh dist/
-          chmod +x dist/flash.sh
-          if [ "${{ matrix.board }}" = "esp32s3-st7789-320_240-ec11" ]; then
-            cp tools/release/README-esp32s3-st7789-320_240-ec11.md dist/README.md
-            cp docs/hardware/ec11_knob_minimal.fzz dist/
-            cp docs/screenshots/boards/ec11_knob_minimal_breadboard.zh.png dist/
-            cp docs/screenshots/boards/ec11_knob_minimal_breadboard.en.png dist/
-          fi
+          set -e
+          BOARDS="cyd_2432s028r e32r35t esp32-st7735s-128_160-ec11 esp32-st7789-320_240-ec11 esp32-ILI9341-320_240-ec11 esp32s3-st7789-320_240-ec11 esp32s3-st7796-480_320-xpt2046-ec11 jc8048w550 esp32s3-JLC-SZP esp32s3-retro-go"
+          for board in $BOARDS; do
+            case "$board" in
+              cyd_2432s028r|e32r35t|esp32-st7735s-128_160-ec11|esp32-st7789-320_240-ec11|esp32-ILI9341-320_240-ec11)
+                shard=esp32 ;;
+              *) shard=esp32s3 ;;
+            esac
+            src="fw/$shard/$board"
+            dest="pkg/ESP-IDFv5.5-$board"
+            mkdir -p "$dest"
+            cp "$src/bootloader.bin" "$src/partition-table.bin" \
+               "$src/klipper_remote_display.bin" "$src/flash.cfg" "$dest/"
+            cp /tmp/esptool.exe "$dest/"
+            cp tools/release/flash.bat tools/release/flash.sh "$dest/"
+            chmod +x "$dest/flash.sh"
+            if [ "$board" = "esp32s3-st7789-320_240-ec11" ]; then
+              cp tools/release/README-esp32s3-st7789-320_240-ec11.md "$dest/README.md"
+              cp docs/hardware/ec11_knob_minimal.fzz "$dest/"
+              cp docs/screenshots/boards/ec11_knob_minimal_breadboard.zh.png "$dest/"
+              cp docs/screenshots/boards/ec11_knob_minimal_breadboard.en.png "$dest/"
+            fi
+            echo "packaged $board:"
+            ls "$dest"
+          done
+          count=$(ls -d pkg/ESP-IDFv5.5-* | wc -l)
+          [ "$count" -eq 10 ] || { echo "::error::expected 10 board packages, got $count"; exit 1; }
 
-      # 直接把 dist 内容作为 artifact：GitHub 下载时会打一层 zip，
-      # 解压后即是平铺的刷机文件，不再出现"zip 套 zip"
+      # 聚合 package artifact：内部按 ESP-IDFv5.5-<board> 目录划分
       - uses: actions/upload-artifact@v4
         with:
-          name: ESP-IDFv5.5-${{ matrix.board }}-${{ github.ref_name }}
-          path: dist/
+          name: packages-${{ github.ref_name }}
+          path: pkg/
 
   desktop-win:
     runs-on: windows-latest
@@ -337,20 +320,32 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          path: dl
+          name: packages-${{ github.ref_name }}
+          path: dl/pkg
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-win-x86_64-${{ github.ref_name }}
+          path: dl/desktop-win
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-macos-arm64-${{ github.ref_name }}
+          path: dl/desktop-mac
 
       - name: Zip artifacts for release
         # 资产名不带版本号：releases/latest/download/<名字> 直链永远指向最新正式版，
         # 文档站板型页的下载链接依赖这一点
         run: |
-          for d in dl/ESP-IDFv5.5-*; do
+          count=$(ls -d dl/pkg/ESP-IDFv5.5-* | wc -l)
+          [ "$count" -eq 10 ] || { echo "::error::expected 10 board packages, got $count"; exit 1; }
+          for d in dl/pkg/ESP-IDFv5.5-*; do
             b=$(basename "$d")
-            b="${b%-${GITHUB_REF_NAME}}"
             (cd "$d" && zip -r "$GITHUB_WORKSPACE/$b.zip" .)
           done
-          (cd dl/desktop-win-x86_64-* && zip -r "$GITHUB_WORKSPACE/desktop-win-x86_64.zip" .)
+          (cd dl/desktop-win && zip -r "$GITHUB_WORKSPACE/desktop-win-x86_64.zip" .)
           # artifact 往返可能丢 unix 执行位，zip 前先补回（zip 会保存权限位）
-          (cd dl/desktop-macos-arm64-* && chmod +x klipper_remote_desktop klipper_remote_simulator && zip -r "$GITHUB_WORKSPACE/desktop-macos-arm64.zip" .)
+          (cd dl/desktop-mac && chmod +x klipper_remote_desktop klipper_remote_simulator && zip -r "$GITHUB_WORKSPACE/desktop-macos-arm64.zip" .)
           ls -la "$GITHUB_WORKSPACE"/*.zip
 
       - uses: softprops/action-gh-release@v2
