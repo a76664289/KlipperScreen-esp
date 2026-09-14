@@ -40,6 +40,7 @@ jobs:
 
       # board|build_dir|sdkconfig|sdkconfig_defaults|chip|flash_size|bootloader_offset
       - name: Build firmware shard (${{ matrix.shard }})
+        shell: bash
         env:
           IDF_CCACHE_ENABLE: "1"
           CCACHE_DIR: ${{ github.workspace }}/.ccache
