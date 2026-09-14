@@ -54,7 +54,7 @@ Toolchain: **ESP-IDF v5.5.5** · **LVGL v9.3** · SDL2 (desktop).
 
 ```bash
 bash tools/build-desktop.sh                       # desktop (controller + simulator)
-bash tools/build-esp32.sh <board> build           # ESP32 firmware (8 boards)
+bash tools/build-esp32.sh <board> build           # ESP32 firmware (9 boards)
 bash tools/build-esp32.sh <board> flash COMx      # build and flash
 ```
 

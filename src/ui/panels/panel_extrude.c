@@ -5,6 +5,7 @@
 #include "../lang.h"
 #include "../ui_anim.h"
 #include "../panel_mgr.h"
+#include "../ui_nav.h"
 #include "printer.h"
 #include "../widgets/toggle_group.h"
 #include <stdio.h>
@@ -79,6 +80,8 @@ static lv_obj_t *create(void)
     lv_obj_set_size(b_unload, bw, ui_px(32));
     lv_obj_align(b_unload, LV_ALIGN_BOTTOM_RIGHT, -ui_px(10), -ui_px(10));
 
+    /* 档位行 + 两排双按钮是二维布局：方向键几何走位（ui_nav 白名单） */
+    ui_nav_group_set_spatial(lv_group_get_default(), true);
     return scr;
 }
 

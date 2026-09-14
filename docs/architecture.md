@@ -123,6 +123,7 @@ BSP 还有两个配套抽象：
 | `esp32s3-st7796-480_320-xpt2046-ec11` | ESP32-S3 | 480×320 ST7796S | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
 | `jc8048w550` | ESP32-S3 | 5" 800×480 RGB 并口 | GT911 电容触摸 | 自研 rgb44（见下） |
 | `esp32s3-JLC-SZP` | ESP32-S3 | 2.0" 320×240 ST7789 | FT6336 电容触摸 | 手动 SPI（见下） |
+| `esp32s3-retro-go` | ESP32-S3 | 3.2" 320×240 ST7789 | GPIO 按键（无触摸） | esp_lcd SPI |
 
 两块特殊板型：
 
@@ -273,7 +274,7 @@ Bambu 连接方式按槽位保存（`bambu_link_t`）：`CLOUD_MONITOR` 云端�
 
 - ESP32：`bash tools/build-esp32.sh <board> [flash COMx]`，七板型或 `all`；桌面端：`bash tools/build-desktop.sh`。工具链准备与分板型细节见 [building.md](building.md)。
 - 版本号维护在 `src/core/version.h`（`KR_VERSION`，设置页与 Moonraker identify 共用）；发版 = 改它 + 打同名 `vX.Y.Z` tag 推送。
-- CI（`.github/workflows/build.yml`）：push main / tag `v*` / 手动触发。固件矩阵在 `espressif/idf:v5.5.5` 容器里全量构建七块板型（各自独立 sdkconfig 与构建目录），桌面端构建 Windows 与 macOS 目标。tag 触发 release：资产名不带版本号（`klipper-remote-esp32-<board>.zip`），文档站下载直链走 `releases/latest/download/...`；CI 会把移动标签 `latest` 强推到最新正式版提交；tag 含 `wip` 标为预发布。
+- CI（`.github/workflows/build.yml`）：push main / tag `v*` / 手动触发。固件矩阵在 `espressif/idf:v5.5.5` 容器里全量构建九块板型（各自独立 sdkconfig 与构建目录），桌面端构建 Windows 与 macOS 目标。tag 触发 release：资产名不带版本号（固件 `ESP-IDFv5.5-<board>.zip`，桌面 `desktop-win-x86_64.zip` / `desktop-macos-arm64.zip`），文档站下载直链走 `releases/latest/download/...`；CI 会把移动标签 `latest` 强推到最新正式版提交；tag 含 `wip` 标为预发布。
 
 ---
 

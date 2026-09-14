@@ -6,6 +6,7 @@
 #include "../theme.h"
 #include "../lang.h"
 #include "../panel_mgr.h"
+#include "../ui_nav.h"
 #include "app_settings.h"
 #include "bsp.h"
 #include <stdio.h>
@@ -116,6 +117,8 @@ static lv_obj_t *create(void)
     }
     theme_row_dropdown(scr, "主题", th_opts, y, th_sel, on_theme_select, NULL);
 
+    /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
+    ui_nav_group_set_list(lv_group_get_default(), true);
     return scr;
 }
 

@@ -29,6 +29,8 @@ tools/icongen/.venv/
 
 # 临时
 tmp/
+__pycache__/
+*.py[cod]
 
 # MkDocs 本地构建产物（CI 里重新构建）
 /site/

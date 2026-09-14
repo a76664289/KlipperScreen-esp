@@ -6,6 +6,7 @@
 #include "../lang.h"
 #include "../panel_mgr.h"
 #include "../ui_anim.h"
+#include "../ui_nav.h"
 #include "../widgets/confirm.h"
 #include "../assets/icons.h"
 #include "app_settings.h"
@@ -91,6 +92,8 @@ static lv_obj_t *create(void)
     }
 
     refresh();
+    /* 双卡片横向布局：方向键只几何走位（左右不当确认/返回，确认只认回车） */
+    ui_nav_group_set_spatial(lv_group_get_default(), true);
     return scr;
 }
 

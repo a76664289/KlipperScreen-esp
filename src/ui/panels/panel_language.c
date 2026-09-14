@@ -5,6 +5,7 @@
 #include "../theme.h"
 #include "../lang.h"
 #include "../panel_mgr.h"
+#include "../ui_nav.h"
 #include "../ui_anim.h"
 #include "app_settings.h"
 #include "bsp.h"
@@ -71,6 +72,8 @@ static lv_obj_t *create(void)
     }
 
     refresh();
+    /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
+    ui_nav_group_set_list(lv_group_get_default(), true);
     return scr;
 }
 

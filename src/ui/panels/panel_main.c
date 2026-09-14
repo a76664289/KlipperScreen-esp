@@ -7,6 +7,7 @@
 #include "../panel_mgr.h"
 #include "../ui_anim.h"
 #include "printer.h"
+#include "../ui_nav.h"
 #include "app_settings.h"
 #include "../widgets/confirm.h"
 #include <stdio.h>
@@ -260,6 +261,8 @@ static lv_obj_t *create(void)
     lv_obj_align(btn_restart, LV_ALIGN_BOTTOM_RIGHT, -ui_px(8), -ui_px(4));
     lv_obj_add_event_cb(btn_restart, on_restart, LV_EVENT_CLICKED, NULL);
 
+    /* 网格布局：四方向键走几何就近聚焦（create 期间默认组即本面板导航组） */
+    ui_nav_group_set_spatial(lv_group_get_default(), true);
     return scr;
 }
 

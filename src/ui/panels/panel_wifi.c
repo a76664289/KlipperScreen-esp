@@ -72,6 +72,7 @@ static void start_connect(const char *ssid, const char *pwd)
     connecting = 1;
     connect_ticks = 0;
     conn_nav_group = ui_nav_modal_begin();
+    ui_nav_modal_set_cancel(conn_nav_group, conn_overlay_close);   /* 返回键 = 放弃连接 */
 
     conn_overlay = lv_obj_create(lv_layer_top());
     ui_nav_attach_scope(conn_overlay, conn_nav_group);
@@ -135,6 +136,7 @@ static void open_password_dialog(const char *ssid)
     strncpy(sel_ssid, ssid, sizeof(sel_ssid) - 1);
     sel_ssid[sizeof(sel_ssid) - 1] = 0;
     pwd_nav_group = ui_nav_modal_begin();
+    ui_nav_modal_set_cancel(pwd_nav_group, pwd_overlay_close);   /* 返回键 = 取消输入 */
 
     pwd_overlay = lv_obj_create(lv_layer_top());
     ui_nav_attach_scope(pwd_overlay, pwd_nav_group);
@@ -287,6 +289,8 @@ static lv_obj_t *create(void)
     lv_obj_set_style_text_align(lbl_hint, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(lbl_hint, LV_ALIGN_TOP_MID, 0, THEME_TITLEBAR_H + ui_px(90));
 
+    /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
+    ui_nav_group_set_list(lv_group_get_default(), true);
     return scr;
 }
 

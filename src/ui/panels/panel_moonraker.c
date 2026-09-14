@@ -112,6 +112,7 @@ static void open_text_dialog(const char *title, char *target, size_t cap,
     edit_label = row_label;
     edit_masked = masked;
     txt_nav_group = ui_nav_modal_begin();
+    ui_nav_modal_set_cancel(txt_nav_group, txt_overlay_close);   /* 返回键 = 取消输入 */
 
     txt_overlay = lv_obj_create(lv_layer_top());
     ui_nav_attach_scope(txt_overlay, txt_nav_group);
@@ -283,6 +284,7 @@ static void open_ip_dialog(void)
 
     ip_nav_group = ui_nav_modal_begin();
     if (!ip_nav_group) return;
+    ui_nav_modal_set_cancel(ip_nav_group, ip_overlay_close);   /* 返回键 = 放弃编辑 */
 
     ip_overlay = lv_obj_create(lv_layer_top());
     ui_nav_attach_scope(ip_overlay, ip_nav_group);
@@ -641,6 +643,8 @@ static lv_obj_t *create(void)
     lv_obj_add_event_cb(btn_save, on_save_click, LV_EVENT_CLICKED, NULL);
 
     on_show();   /* 读当前槽并刷新行 */
+    /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
+    ui_nav_group_set_list(lv_group_get_default(), true);
     return scr;
 }
 

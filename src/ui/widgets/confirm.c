@@ -21,6 +21,18 @@ static void close(int ok)
 
 static void on_ok(lv_event_t *e)     { LV_UNUSED(e); close(1); }
 static void on_cancel(lv_event_t *e) { LV_UNUSED(e); close(0); }
+static void cancel_from_nav(void)          { close(0); }
+
+/* 确认框属原生组：左/右原样送达控件；两个按钮的场景把左右当成焦点切换，
+   与上下键（LVGL 线性 NEXT/PREV）行为一致。 */
+static void on_nav_key(lv_event_t *e)
+{
+    uint32_t k = lv_event_get_key(e);
+    lv_group_t *g = lv_obj_get_group(lv_event_get_target_obj(e));
+    if (!g) return;
+    if (k == LV_KEY_LEFT)       lv_group_focus_prev(g);
+    else if (k == LV_KEY_RIGHT) lv_group_focus_next(g);
+}
 
 static void on_overlay_click(lv_event_t *e)
 {
@@ -33,6 +45,7 @@ void confirm_open(const char *text, const char *ok_text, confirm_cb_t callback, 
     cb = callback;
     ud = user_data;
     nav_group = ui_nav_modal_begin();
+    ui_nav_modal_set_cancel(nav_group, cancel_from_nav);   /* 返回键 = 取消 */
 
     overlay = lv_obj_create(lv_layer_top());
     ui_nav_attach_scope(overlay, nav_group);
@@ -62,10 +75,12 @@ void confirm_open(const char *text, const char *ok_text, confirm_cb_t callback, 
     lv_obj_t *b_cancel = theme_button(row, LV_SYMBOL_CLOSE, "取消", 0);
     lv_obj_set_size(b_cancel, ui_px(110), ui_px(34));
     lv_obj_add_event_cb(b_cancel, on_cancel, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(b_cancel, on_nav_key, LV_EVENT_KEY, NULL);
 
     lv_obj_t *b_ok = theme_button(row, LV_SYMBOL_OK, ok_text ? ok_text : "确认", 0);
     lv_obj_set_style_bg_color(b_ok, theme_col(THEME_COL_ERROR), 0);
     theme_focus_bg(b_ok, THEME_COL_ERROR, LV_OPA_COVER);
     lv_obj_set_size(b_ok, ui_px(110), ui_px(34));
     lv_obj_add_event_cb(b_ok, on_ok, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(b_ok, on_nav_key, LV_EVENT_KEY, NULL);
 }

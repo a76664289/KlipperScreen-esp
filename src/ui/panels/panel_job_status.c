@@ -6,6 +6,7 @@
 #include "../lang.h"
 #include "../ui_anim.h"
 #include "../panel_mgr.h"
+#include "../ui_nav.h"
 #include "../assets/icons.h"
 #include "printer.h"
 #include "app_settings.h"
@@ -346,6 +347,8 @@ static lv_obj_t *create(void)
     theme_label(readonly_card, "云端监视 · 只读", THEME_FONT_M, THEME_COL_TEXT);
 
     update_ui();
+    /* 底部按钮横向排列：方向键几何走位（ui_nav 白名单） */
+    ui_nav_group_set_spatial(lv_group_get_default(), true);
     return scr;
 }
 

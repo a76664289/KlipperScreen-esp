@@ -5,6 +5,7 @@
 #include "../theme.h"
 #include "../lang.h"
 #include "../ui_anim.h"
+#include "../ui_nav.h"
 #include "../panel_mgr.h"
 #include "printer.h"
 #include "../widgets/keypad.h"
@@ -135,33 +136,39 @@ static void on_temp_row(lv_event_t *e)
     if (code == LV_EVENT_FOCUSED) {
         lv_group_t *group = lv_obj_get_group(row);
         if (group && lv_group_get_editing(group)) begin_edit(row);
-    } else if (code == LV_EVENT_KEY && editing_row == row) {
+    } else if (code == LV_EVENT_KEY) {
         uint32_t key = lv_event_get_key(e);
-        if (key == LV_KEY_LEFT || key == LV_KEY_RIGHT) {
+        if (editing_row == row && (key == LV_KEY_LEFT || key == LV_KEY_RIGHT)) {
             step_size = accelerated_step(lv_tick_get());
             editing_value += key == LV_KEY_RIGHT ? step_size : -step_size;
             if (editing_value < 0) editing_value = 0;
             if (editing_value > editing_max_temp()) editing_value = editing_max_temp();
             render_edit_value();
             schedule_commit();
-        } else if (key == LV_KEY_ENTER) {
-            finish_edit();
-            lv_group_set_editing(lv_obj_get_group(row), false);
         }
     } else if (code == LV_EVENT_DEFOCUSED && editing_row == row) {
         finish_edit();
     } else if (code == LV_EVENT_CLICKED) {
         lv_indev_t *indev = lv_event_get_indev(e);
-        if (indev && lv_indev_get_type(indev) == LV_INDEV_TYPE_ENCODER) {
+        if (!indev) return;
+        lv_indev_type_t t = lv_indev_get_type(indev);
+        if (t == LV_INDEV_TYPE_ENCODER || t == LV_INDEV_TYPE_KEYPAD) {
             lv_group_t *group = lv_obj_get_group(row);
             if (editing_row == row) {
+                /* 编辑中按确定：提交并退出调温（释放沿触发，不会连带点开数字键盘） */
                 finish_edit();
                 lv_group_set_editing(group, false);
+            } else if (t == LV_INDEV_TYPE_KEYPAD) {
+                /* 键盘/按键端：弹数字键盘输入目标温度（旋钮就地下调温用编码器按下进入） */
+                if (row == row_ext_obj)
+                    keypad_open("喷嘴目标温度", printer_target_ext(), set_ext_cb, NULL);
+                else
+                    keypad_open("热床目标温度", printer_target_bed(), set_bed_cb, NULL);
             } else {
                 begin_edit(row);
                 lv_group_set_editing(group, true);
             }
-        } else if (indev && lv_indev_get_type(indev) == LV_INDEV_TYPE_POINTER) {
+        } else if (t == LV_INDEV_TYPE_POINTER) {
             if (row == row_ext_obj)
                 keypad_open("喷嘴目标温度", printer_target_ext(), set_ext_cb, NULL);
             else
@@ -288,6 +295,9 @@ static lv_obj_t *create(void)
 
     readonly_hint = theme_label(scr, "云端监视 · 温度只读", THEME_FONT_S, THEME_COL_TEXT_DIM);
     lv_obj_align(readonly_hint, LV_ALIGN_BOTTOM_MID, 0, -ui_px(20));
+
+    /* 双卡片 + 底部预设行是二维布局：方向键走几何就近聚焦 */
+    ui_nav_group_set_spatial(lv_group_get_default(), true);
 
     return scr;
 }

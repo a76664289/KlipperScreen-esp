@@ -10,20 +10,22 @@
 | [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) | `esp32s3-st7796-480_320-xpt2046-ec11` | 480×320 ST7796S SPI | XPT2046 电阻（共总线）+ EC11 | ESP32-S3 N16R8 / 16MB | 🆕 新机型 |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB 并口 | GT911 电容 | ESP32-S3 / 16MB | ✅ 稳定 |
 | [立创实战派 ESP32-S3](#立创实战派-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 电容 | ESP32-S3 N16R8 / 16MB | ✅ 已实机验证 |
+| [esp32s3-retro-go](#esp32s3-retro-go) | `esp32s3-retro-go` | 3.2" 240×320 ST7789 SPI | 无，GPIO 按键 | ESP32-S3 / 16MB | 🆕 新机型 |
 
-刷机包命名：`klipper-remote-esp32-<board>.zip`（资产名不带版本号，下面的直链永远指向最新正式版）。遇到问题请到 [Issues](https://github.com/umeiko/KlipperScreen-esp/issues) 反馈。
+刷机包命名：`ESP-IDFv5.5-<board>.zip`（资产名不带版本号，下面的直链永远指向最新正式版）。遇到问题请到 [Issues](https://github.com/umeiko/KlipperScreen-esp/issues) 反馈。
 
 | 板型 | 刷机包直链（最新正式版） |
 |---|---|
-| CYD 2432S028R | [klipper-remote-esp32-cyd_2432s028r.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-cyd_2432s028r.zip) |
-| E32R35T | [klipper-remote-esp32-e32r35t.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-e32r35t.zip) |
-| esp32s3-st7789-320_240-ec11 | [klipper-remote-esp32-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-st7789-320_240-ec11.zip) |
-| esp32-st7735s-128_160-ec11 | [klipper-remote-esp32-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32-st7735s-128_160-ec11.zip) |
-| esp32-st7789-320_240-ec11 | [klipper-remote-esp32-esp32-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32-st7789-320_240-ec11.zip) |
-| esp32s3-st7796-480_320-xpt2046-ec11 | [klipper-remote-esp32-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-st7796-480_320-xpt2046-ec11.zip) |
-| JC8048W550 | [klipper-remote-esp32-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-jc8048w550.zip) |
-| 立创实战派 ESP32-S3 | [klipper-remote-esp32-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-esp32-esp32s3-JLC-SZP.zip) |
-| Windows 桌面模拟器 | [klipper-remote-desktop-win-x86_64.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/klipper-remote-desktop-win-x86_64.zip) |
+| CYD 2432S028R | [ESP-IDFv5.5-cyd_2432s028r.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r.zip) |
+| E32R35T | [ESP-IDFv5.5-e32r35t.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-e32r35t.zip) |
+| esp32s3-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip) |
+| esp32-st7735s-128_160-ec11 | [ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip) |
+| esp32-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7789-320_240-ec11.zip) |
+| esp32s3-st7796-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip) |
+| JC8048W550 | [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip) |
+| 立创实战派 ESP32-S3 | [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip) |
+| esp32s3-retro-go | [ESP-IDFv5.5-esp32s3-retro-go.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-retro-go.zip) |
+| Windows 桌面模拟器 | [desktop-win-x86_64.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/desktop-win-x86_64.zip) |
 
 ---
 
@@ -254,3 +256,32 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | LCD 背光 | 42 | LEDC PWM，低电平点亮 |
 | 触摸 / PCA9557 SDA / SCL | 1 / 2 | I2C0 @ 100kHz |
 | 用户键（息屏/唤醒） | 0 | 低电平有效，内部上拉 |
+
+## esp32s3-retro-go
+
+*Chaeng 的 retro-go ESP32-S3 掌机主板（T320-S3）：3.2" IPS 屏 + 全套掌机按键，无触摸。引脚依据上游固件 [retro-go_chaeng](https://github.com/Chaeng3/retro-go_chaeng)（`components/retro-go/targets/t320-s3`）核对；硬件开源页：[oshwhub.com/chaeng/project_jofcnupz](https://oshwhub.com/chaeng/project_jofcnupz)。*
+
+逻辑分辨率 **320×240 横屏**。
+
+- 主控：ESP32-S3（双核 240MHz），16MB QIO Flash + 8MB Octal PSRAM @ 80MHz
+- 显示：T320B7-C12-16 3.2" IPS（ST7789，原生 240×320），SPI2 @ 40MHz，DMA 双缓冲（2 × 40 行）；RGB 颜色序，横屏 MADCTL（MV|MY），**必须 INVON**（`bsp_disp_set_invert` 开关语义已取反）
+- 输入：无触摸层——导航全部走板载 GPIO 按键，经 6 键语义层（上/下/左/右/确定/返回）驱动。确定键并联 **A、START、SELECT** 三键（任一个都是确认），返回键为 **B**；全部内部上拉、低电平有效。**KEY_MENU（GPIO18）、KEY_OPTION（GPIO8）、KEY_BOOT（GPIO0）本固件保留未映射**——GPIO0 有意不再兼任息屏按钮，避免输入职责混淆
+- 背光：GPIO39，LEDC PWM 8bit/5kHz，高电平点亮
+- 板上的 SD 卡槽、I2S 喇叭、麦克风、电池电量 ADC、WS2812 状态灯**本固件均未使用**
+
+| 功能 | GPIO | 本固件是否使用 |
+|---|---|---|
+| TFT MOSI / CLK | 12 / 48 | 是——SPI2 @ 40MHz |
+| TFT CS / DC / RST | 14 / 47 / 3 | 是 |
+| TFT 背光 | 39 | 是——高电平点亮 |
+| UP / DOWN / LEFT / RIGHT | 7 / 20 / 19 / 6 | 是——焦点导航 |
+| A / START / SELECT | 15 / 17 / 16 | 是——三键同为确定 |
+| B | 5 | 是——返回 |
+| MENU / OPTION / BOOT | 18 / 8 / 0 | 否——保留未映射 |
+| SD CMD(MOSI) / CLK / DATA(MISO) / CD(CS) | 11 / 13 / 9 / 10 | 否（SDSPI，SPI3） |
+| 喇叭 DOUT / BCLK / LRCK | 40 / 41 / 42 | 否（I2S） |
+| MIC WS / SCK / DIN | 1 / 2 / 21 | 否 |
+| 电池电压 ADC | 4 | 否（ADC1_CH3） |
+| STATUS_LED（WS2812） | 38 | 否 |
+
+方向键移动焦点，确定激活聚焦控件，返回关闭弹层或退回上一面板——与桌面端键盘行为一致。屏幕超时熄灭后，第一次按键只负责唤醒。

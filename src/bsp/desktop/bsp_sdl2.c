@@ -5,6 +5,8 @@
  */
 #include "bsp.h"
 #include "bsp_screen_power.h"
+#include "ui_buttons.h"
+#include "ui_nav.h"
 #include <SDL.h>
 
 #include <stdio.h>
@@ -71,10 +73,48 @@ void bsp_init(void)
     SDL_SetEventFilter(screen_input_filter, NULL);
 }
 
+/* 物理键盘 → 语义实体按钮（上/下/左/右/确定/返回）。
+   文本输入会话期间键盘归会话所有（ui_nav 的 desktop_keyboard_watch），这里让路。
+   事件在 SDL_PollEvent（LVGL 定时器内、已持锁）里派发，可直接喂语义层。 */
+static int SDLCALL buttons_sdl_watch(void *userdata, SDL_Event *event)
+{
+    (void)userdata;
+    if (event->type != SDL_KEYDOWN && event->type != SDL_KEYUP) return 0;
+    if (ui_desktop_input_active()) {
+        /* 文本输入会话期间：方向键归导航走位；回车归导航（按下虚拟键盘高亮键 /
+           数字键盘焦点键 = 输入字符），F1 才提交表单；字符/退格/ESC 归会话。 */
+        switch (event->key.keysym.sym) {
+        case SDLK_UP: case SDLK_DOWN: case SDLK_LEFT: case SDLK_RIGHT:
+        case SDLK_RETURN: case SDLK_KP_ENTER:
+            break;
+        default: return 0;
+        }
+    }
+    if (event->key.repeat) return 0;   /* 长按重复由 LVGL keypad 处理，忽略 SDL 自重复 */
+    if (event->type == SDL_KEYDOWN &&
+        (event->key.keysym.mod & (KMOD_CTRL | KMOD_ALT | KMOD_GUI))) return 0;
+
+    ui_button_id_t id;
+    switch (event->key.keysym.sym) {
+    case SDLK_UP:        id = UI_BTN_UP;    break;
+    case SDLK_DOWN:      id = UI_BTN_DOWN;  break;
+    case SDLK_LEFT:      id = UI_BTN_LEFT;  break;
+    case SDLK_RIGHT:     id = UI_BTN_RIGHT; break;
+    case SDLK_RETURN:
+    case SDLK_KP_ENTER:  id = UI_BTN_OK;    break;
+    case SDLK_ESCAPE:
+    case SDLK_BACKSPACE: id = UI_BTN_BACK;  break;
+    default: return 0;
+    }
+    ui_buttons_send(id, event->type == SDL_KEYDOWN);
+    return 0;
+}
+
 void bsp_input_init(void)
 {
     /* 滚轮正/反转 = encoder diff；中键按下 = encoder push。 */
     lv_sdl_mousewheel_create();
+    SDL_AddEventWatch(buttons_sdl_watch, NULL);
 }
 
 /* ---------- 开机动画推屏（boot_anim 调用；首次调用时建全屏 canvas） ---------- */

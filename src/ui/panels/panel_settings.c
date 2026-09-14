@@ -5,6 +5,7 @@
 #include "../theme.h"
 #include "../lang.h"
 #include "../panel_mgr.h"
+#include "../ui_nav.h"
 #include "version.h"
 
 static void open_wifi(lv_event_t *e)
@@ -53,6 +54,8 @@ static lv_obj_t *create(void)
 
     theme_row(scr, "版本", KR_VERSION, y);
 
+    /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
+    ui_nav_group_set_list(lv_group_get_default(), true);
     return scr;
 }
 

@@ -2,6 +2,7 @@
 #include "../theme.h"
 #include "../lang.h"
 #include "../panel_mgr.h"
+#include "../ui_nav.h"
 #include "../ui_anim.h"
 #include "app_settings.h"
 #include <stdint.h>
@@ -88,6 +89,8 @@ static lv_obj_t *create(void)
         lv_obj_align(states[i], LV_ALIGN_TOP_MID, 0, ui_px(110));
     }
     refresh();
+    /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
+    ui_nav_group_set_list(lv_group_get_default(), true);
     return scr;
 }
 

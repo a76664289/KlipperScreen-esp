@@ -90,6 +90,8 @@ static void on_desktop_input(ui_desktop_input_event_t event, const char *text, v
     }
 }
 
+static void cancel_from_nav(void) { keypad_close(0); }
+
 void keypad_open(const char *title, float initial, keypad_cb_t callback, void *user_data)
 {
     if (overlay) return;   /* 已打开 */
@@ -98,6 +100,8 @@ void keypad_open(const char *title, float initial, keypad_cb_t callback, void *u
     snprintf(buf, sizeof(buf), "%d", (int)(initial + 0.5f));
     desktop_replace_pending = true;
     nav_group = ui_nav_modal_begin();
+    ui_nav_modal_set_cancel(nav_group, cancel_from_nav);   /* 返回键 = 取消 */
+    ui_nav_group_set_spatial(nav_group, true);   /* 数字网格：方向键几何就近聚焦 */
 
     overlay = lv_obj_create(lv_layer_top());
     ui_nav_attach_scope(overlay, nav_group);

@@ -5,6 +5,7 @@
 #include "../theme.h"
 #include "../ui_anim.h"
 #include "../panel_mgr.h"
+#include "../ui_nav.h"
 #include "printer.h"
 #include <stdio.h>
 #include <string.h>
@@ -112,6 +113,8 @@ static lv_obj_t *create(void)
     lv_obj_set_style_pad_row(list, THEME_GAP, 0);
     lv_obj_set_scrollbar_mode(list, LV_SCROLLBAR_MODE_AUTO);
 
+    /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
+    ui_nav_group_set_list(lv_group_get_default(), true);
     return scr;
 }
 

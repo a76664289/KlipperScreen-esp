@@ -3,6 +3,28 @@
 #include "ui_app.h"
 #include "boot_anim.h"
 #include "app_settings.h"
+#include "bsp_caps.h"
+
+#if BSP_HAS_BUTTONS
+#include "bsp_gpio_buttons.h"
+#include "ui_buttons.h"
+
+/* GPIO 实体按钮后端（板型键表在 BSP 层注册）→ ui_buttons 语义层；
+   两边枚举按同一顺序定义，静态断言钉死数值对应关系。 */
+_Static_assert((int)BSP_NAV_KEY_UP == (int)UI_BTN_UP &&
+               (int)BSP_NAV_KEY_DOWN == (int)UI_BTN_DOWN &&
+               (int)BSP_NAV_KEY_LEFT == (int)UI_BTN_LEFT &&
+               (int)BSP_NAV_KEY_RIGHT == (int)UI_BTN_RIGHT &&
+               (int)BSP_NAV_KEY_OK == (int)UI_BTN_OK &&
+               (int)BSP_NAV_KEY_BACK == (int)UI_BTN_BACK &&
+               (int)BSP_NAV_KEY_COUNT == (int)UI_BTN_COUNT,
+               "nav key enum mismatch");
+
+static void nav_button_forward(int key, bool pressed)
+{
+    ui_buttons_send((ui_button_id_t)key, pressed);
+}
+#endif
 
 void debug_cli_start(void);
 
@@ -14,6 +36,9 @@ void app_main(void)
     bsp_input_init();      /* 可选附加输入（Kconfig 旋转编码器），可与触摸并存 */
     boot_anim_play(bsp_lcd_push, bsp_delay_ms);   /* 「Umeko」开机动画（~2.5s） */
     ui_app_create();       /* 与 desktop 后端共享的同一份 UI 代码 */
+#if BSP_HAS_BUTTONS
+    bsp_gpio_buttons_set_handler(nav_button_forward);   /* 共享 keypad indev 已在上行建好 */
+#endif
     bsp_set_brightness(settings_load_brightness());   /* 背光偏好（klipperscreen.conf） */
     bsp_set_screen_timeout(settings_load_screen_off());   /* 自动息屏（0=永不） */
     bsp_lvgl_unlock();

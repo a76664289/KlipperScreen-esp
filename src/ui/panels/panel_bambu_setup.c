@@ -149,6 +149,7 @@ static void open_text_dialog(const char *title, char *target, size_t cap,
     edit_masked = masked;
     txt_nav_group = ui_nav_modal_begin();
     if (!txt_nav_group) return;
+    ui_nav_modal_set_cancel(txt_nav_group, close_text_dialog);   /* 返回键 = 取消输入 */
 
     txt_overlay = lv_obj_create(lv_layer_top());
     ui_nav_attach_scope(txt_overlay, txt_nav_group);
@@ -578,6 +579,8 @@ static lv_obj_t *create(void)
 
     shown_valid = 0;
     refresh();
+    /* 表单含半宽按钮行（区域/账号类型、刷新/退出），属二维布局：方向键几何走位 */
+    ui_nav_group_set_spatial(lv_group_get_default(), true);
     return scr;
 }
 

@@ -11,3 +11,11 @@
 #else
 #define BSP_HAS_TOUCH_CAL 0
 #endif
+
+/* BSP_HAS_BUTTONS：板型注册了 GPIO 实体按钮导航后端（bsp_gpio_buttons，
+   上/下/左/右/确定/返回喂 ui_buttons 语义层）；其余板型为 0，输入行为不变 */
+#if defined(CONFIG_BOARD_ESP32S3_RETRO_GO)
+#define BSP_HAS_BUTTONS 1
+#else
+#define BSP_HAS_BUTTONS 0
+#endif

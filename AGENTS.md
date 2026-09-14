@@ -4,9 +4,20 @@
 
 Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（MinGW，调试用同一套 UI 代码）。LVGL 9.3，MIT。仓库：`umeiko/KlipperScreen-esp`。
 
+## 外部编码代理与 Token 控制
+
+- 委派的目标若是节省 Codex token，小型、边界清楚的改动默认由当前 Agent 直接完成；不要使用 `Kimi ACP + K3-256k + Thinking Max + 全量流式监控`。一次桌面键盘适配实测让 Kimi 使用约 167k token，同时消耗约 5% Codex 周限额，成本高于直接实现。
+- 用户明确要求使用 Kimi 时，优先调用 `python tools/kimi-delegate.py -p "..."`；它在本地消费 ACP 流，只输出最终答复。默认 `--approval ask`：遇到工具审批或 AskUserQuestion 时只显示一条 `[kimi-request]` 摘要，通过同一进程 stdin 回复选项编号后原 turn 继续；自动策略必须显式传 `--approval reject|allow-once|allow-always`。主 Agent 只读取最终报告、`git diff` 和少量验证结果。不要直接把 `kimi acp` 接到会话终端；确需保留原始协议时才显式传 `--log <path>`，该日志可能很大。
+- 委派启动时会立即输出 `run-id`，并在 `tmp/kimi-delegate-state/` 原子维护限长状态快照；长时间静默时按需调用 `python tools/kimi-delegate.py status --run-id <id> --max-chars 1500`，后续带上上次返回的 `--since <cursor>` 可避免重复内容。快照只含最近可见 Agent 文本、工具状态、审批请求和委派前后 worktree 元数据，不含 thought 或 raw tool output；不要高频轮询，查询结果本身仍会占 Codex 上下文。
+- 推荐默认档位为 `python tools/kimi-delegate.py --thinking low --mode auto --approval ask -p "..."`；低档不足再升 `high`，只有用户明确要求或任务确实需要时才用 `max`。平时不要开 `--verbose` 或 `--log`；长提示词用 `-f <prompt-file>`，需要追问或审批后续接时复用 `--session-id`。提示词只给必要上下文，并要求最终答复简短列出改动文件、验证结果和遗留问题。
+- 主 Agent 验收外部代理时只看最终报告、`git diff --stat`、目标文件 diff、`git diff --check` 和一个针对性 build/smoke；不要把 ACP 的思考流、完整工具输出或无关大 diff 重新灌入上下文。这样才可能真正节省 Codex token；ACP 只是传输协议，本身不保证省 token。
+- `kimi acp` 与 `tools/kimi-delegate.py` 默认使用当前 `KIMI_CODE_HOME`（未设置时为 `~/.kimi-code`）中的 Kimi Code 登录凭证。切换订阅账号要先 `kimi logout` 再 `kimi login`，切换后建议重启 ACP 进程；若要同时隔离多个账号，为每个进程设置不同的 `KIMI_CODE_HOME` 并分别登录，委派工具会继承该环境变量。
+- `Thinking Max` 只用于确有复杂推理需求的任务；常规实现使用低/高档思考。提示词必须写清修改边界、最小验证和停止条件，happy path 已证明后立即收尾，不继续追逐截图时机、动画中间态等非阻塞现象。
+- 委派前后分别检查 `git status --short --branch`；要求外部代理自行清理调试打印、自动 demo、截图和临时文件。验收只做与风险相称的 `git diff --check`、目标构建或一个 smoke check，不因委派自动扩大测试范围。
+
 ## 构建/烧录
 
-- ESP32：`bash tools/build-esp32.sh <board> [flash COMx]`，board ∈ `cyd_2432s028r` / `e32r35t` / `esp32s3-st7789-320_240-ec11`（原 ec11_knob_minimal，S3+ST7789）/ `esp32-st7735s-128_160-ec11`（原 ec11_knob_esp32，ESP32+ST7735S）/ `esp32-st7789-320_240-ec11`（ESP32+ST7789 320x240，引脚同 st7735s 板）/ `esp32s3-st7796-480_320-xpt2046-ec11`（S3+ST7796S+XPT2046 共总线+EC11）/ `jc8048w550` / `esp32s3-JLC-SZP` / `all`。烧录前必须先断开串口占用（`mcp__serial-mcp__close_port`），烧后重连（115200）。
+- ESP32：`bash tools/build-esp32.sh <board> [flash COMx]`，board ∈ `cyd_2432s028r` / `e32r35t` / `esp32s3-st7789-320_240-ec11`（原 ec11_knob_minimal，S3+ST7789）/ `esp32-st7735s-128_160-ec11`（原 ec11_knob_esp32，ESP32+ST7735S）/ `esp32-st7789-320_240-ec11`（ESP32+ST7789 320x240，引脚同 st7735s 板）/ `esp32s3-st7796-480_320-xpt2046-ec11`（S3+ST7796S+XPT2046 共总线+EC11）/ `jc8048w550` / `esp32s3-JLC-SZP` / `esp32s3-retro-go`（Chaeng retro-go S3 掌机，ST7789+GPIO 按键）/ `all`。烧录前必须先断开串口占用（`mcp__serial-mcp__close_port`），烧后重连（115200）。
 - 桌面端：`bash tools/build-desktop.sh`。
 - **sdkconfig 大坑**：改 `sdkconfig.defaults.<board>` 对已生成的 `sdkconfig.<board>` 不生效——要改必须两个文件都改（sdkconfig 里翻 canonical 行，注意 `# CONFIG_XXX is not set` 会覆盖 defaults）。
 - IDF 源码在 `C:/esp/v5.5.5/esp-idf`。GitHub 走代理 `curl --proxy http://127.0.0.1:8635`。
@@ -15,7 +26,7 @@ Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（M
 ## 发版约定
 
 - 版本号维护在 `src/core/version.h`（`KR_VERSION`，设置页和 Moonraker identify 都用它）；发版 = 改它 + 打同名 `vX.Y.Z` tag 推送。
-- CI  release 资产名**不带版本号**（`klipper-remote-esp32-<board>.zip`），文档站下载直链走 `releases/latest/download/...`；tag 含 `wip` 标为预发布。
+- CI  release 资产名**不带版本号**：固件 `ESP-IDFv5.5-<board>.zip`、桌面 `desktop-win-x86_64.zip` / `desktop-macos-arm64.zip`（`ESP-IDFv5.5` 是构建框架版本，不表示目标芯片都是 ESP32）；文档站下载直链走 `releases/latest/download/...`；tag 含 `wip` 标为预发布。旧 `klipper-remote-*` 遗留资产由 release job 在新资产上传成功后自动按 id 清理。
 - CI 会强推移动标签 `latest` 到最新正式版提交。
 - `src/ui/CMakeLists.txt` 是 GLOB 收集源文件：新增面板/字体文件后若链接报 undefined，先 touch 它触发 CMake 重配（不能加 CONFIGURE_DEPENDS，IDF script 模式会报错）。
 
@@ -23,6 +34,7 @@ Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（M
 
 - 小屏（160x128，`ui_scale() < 1.0f`）专属待遇：标题栏用 ≤2 字短标题——面板注册时在 `panel_def_t` 里填 `.title_s`（NULL 则用 `.title`），新增词条要同步补 `src/ui/lang.c` 五语言 dict；子面板标题栏不显示温度（panel_mgr.c show() 里按 ui_scale 判断）；SVG 图标统一用 0.45x 预生成变体（tools/icongen 生成 `_sm` 图标，`ui_layout.c` 的 `icon_sm()` 按映射表替换，新图标要同步进 `icon_sm_map`；`panel_printers.c` 槽位 logo 有自己的 scale 需单独乘 0.45）。
 - **面板不常驻**：非主面板离开时屏幕+导航组即销毁（panel_mgr.c `destroy_left_panel()`，CYD 无 PSRAM 扛不住 17 个面板全缓存，曾是 OOM 卡死根因）。面板每次进入都重跑 `create()`，静态对象指针不得假设跨访问存活；标题长/与打印控制无关的面板在 `panel_def_t` 置 `.hide_temps = 1`。
+- **方向键导航白名单**（分派在 `ui_buttons.c`，实现在 `ui_nav.c`，ESP32 实体键与桌面键盘共用）：未标记组保持原生——上下=LVGL 线性 NEXT/PREV、左右原样送达控件、回车确认、Esc 返回。面板在 `create()` 里对默认组标记：`ui_nav_group_set_list()`（纯列表页：左=返回、右=进入/确定）或 `ui_nav_group_set_spatial()`（网格布局：四方向按屏幕坐标几何就近聚焦；禁用/隐藏项始终跳过，两轮扫描——严格正交邻居找不到时放宽到该方向最近可选项，防灰色项困死焦点）。当前 spatial：主界面/温度/机器模式/切换打印机/挤出/打印状态/拓竹设置/数字键盘（keypad.c）；list：设置/语言/显示/WiFi/文件/文件详情/Moonraker/拓竹连接。屏幕键盘（lv_keyboard 焦点）与展开的下拉框自动四键原样送达，无需标记；组编辑态（`lv_group_get_editing`，如温度调值、IP 段）左右自动原样。桌面端文本输入会话中方向键+回车归导航（回车=按虚拟键盘高亮键=输入字符），**F1=提交表单**；确认框（confirm.c）上下左右都切换按钮。
 
 ## 串口 CLI（JC8048 / esp32 端）
 
@@ -33,6 +45,11 @@ Klipper 远程显示屏：ESP32 固件（ESP-IDF 5.5.5）+ Windows 桌面端（M
 - BSP 接口：`bsp_screen_off()` / `bsp_screen_wake()` / `bsp_screen_is_off()`（`src/bsp/bsp.h`），与自动超时息屏共享同一 `screen_off` 状态；desktop 端为空操作。
 - 通用驱动 `src/bsp/esp32/bsp_sleep_button.c`：多 GPIO 轮询消抖（10ms 轮询 / 30ms 消抖，最多 8 个），任意按钮按下即在息屏/唤醒间切换。各板在 `bsp_init` 里用 `bsp_sleep_button_init()` 注册自己的按钮表。
 - 现有按钮：CYD / E32R35T / JC8048 / esp32-st7735s-128_160-ec11 / esp32-st7789-320_240-ec11 = 板载 BOOT 键（GPIO0，低电平有效）；esp32s3-st7789-320_240-ec11（S3）/ esp32s3-st7796-480_320-xpt2046-ec11（S3）= BOOT（GPIO0）+ 外挂息屏按钮（GPIO39──按键──GND，内部上拉、低电平有效）。
+
+## GPIO 导航按键（ESP32 端，仅 esp32s3-retro-go）
+
+- 通用后端 `src/bsp/esp32/bsp_gpio_buttons.[ch]`：6 键语义（上/下/左/右/确定/返回）喂 `ui_buttons_send()`；逐 GPIO 独立配置内部上拉/下拉/浮空与高/低电平有效；同一语义键可挂多 GPIO（确定键 1..3 个，任一按下即按下、全部抬起才算抬起，按下计数）。10ms 轮询 + 30ms 消抖，必须在持 LVGL 锁的 lvgl_task 里 `bsp_gpio_buttons_poll()`；事件经 handler 函数指针由 entry（app_main.c）接到语义层（避免 bsp→ui 组件反向依赖；两边枚举同序，静态断言钉死）。息屏时第一次按键只唤醒（bsp_screen_activity 吞键）。
+- 板型能力宏 `BSP_HAS_BUTTONS`（`bsp_caps.h`）目前仅 esp32s3-retro-go = 1；键表在各板 `bsp_init` 里 `bsp_gpio_buttons_bind()` 注册，后端不含任何板型引脚。retro-go 键表：UP=7 / DOWN=20 / LEFT=19 / RIGHT=6，OK=A(15)/START(17)/SELECT(16) 并联，BACK=B(5)；MENU(18)/OPTION(8)/BOOT(0) 保留未映射，GPIO0 不注册息屏按钮。
 
 ---
 
