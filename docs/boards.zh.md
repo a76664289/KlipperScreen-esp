@@ -325,6 +325,8 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 *Chaeng 的 retro-go ESP32-S3 掌机主板（T320-S3）：3.2" IPS 屏 + 全套掌机按键，无触摸。引脚依据上游固件 [retro-go_chaeng](https://github.com/Chaeng3/retro-go_chaeng)（`components/retro-go/targets/t320-s3`）核对；硬件开源页：[oshwhub.com/chaeng/project_jofcnupz](https://oshwhub.com/chaeng/project_jofcnupz)。*
 
+![retro-go ESP32-S3 掌机](screenshots/boards/esp32s3_retro_go.jpg)
+
 逻辑分辨率 **320×240 横屏**。
 
 - 主控：ESP32-S3（双核 240MHz），16MB QIO Flash + 8MB Octal PSRAM @ 80MHz

@@ -325,6 +325,8 @@ Logical resolution **320×240 landscape**.
 
 *Chaeng's retro-go ESP32-S3 handheld main board (T320-S3): 3.2" IPS display plus a full gamepad-style button cluster, no touch. Firmware source of the pinout: [retro-go_chaeng](https://github.com/Chaeng3/retro-go_chaeng) (`components/retro-go/targets/t320-s3`); open hardware page: [oshwhub.com/chaeng/project_jofcnupz](https://oshwhub.com/chaeng/project_jofcnupz).*
 
+![retro-go ESP32-S3 handheld](screenshots/boards/esp32s3_retro_go.jpg)
+
 Logical resolution **320×240 landscape**.
 
 - MCU: ESP32-S3 (dual-core 240MHz), 16MB QIO flash + 8MB Octal PSRAM @ 80MHz
