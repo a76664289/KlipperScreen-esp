@@ -3,6 +3,7 @@
 | 板型 | 构建目标 | 屏幕 | 触摸 | 主控 / Flash | 状态 |
 |---|---|---|---|---|---|
 | [CYD 2432S028R](#cyd-2432s028r) | `cyd_2432s028r` | 2.8" 240×320 ILI9341 SPI | XPT2046 电阻 | ESP32 / 4MB | ✅ 稳定 |
+| [CYD 2432S028R-PLUS](#cyd-2432s028r-plus) | `cyd_2432s028r_plus` | 2.8" 240×320 ST7789 SPI | XPT2046 电阻 | ESP32-WROOM-32E / 4MB | 🆕 新机型，CYD 引脚 |
 | [E32R35T](#e32r35t) | `e32r35t` | 3.5" 320×480 ST7796U SPI | XPT2046 电阻 | ESP32-32E / 4MB | ✅ 稳定 |
 | [esp32s3-st7789-320_240-ec11](#esp32s3-st7789-320_240-ec11) | `esp32s3-st7789-320_240-ec11` | 240×320 ST7789 SPI | 无，纯旋钮 | ESP32-S3 N16R8 / 16MB | ✅ 官方参考，贡献者实机验证 |
 | [esp32-st7735s-128_160-ec11](#esp32-st7735s-128_160-ec11) | `esp32-st7735s-128_160-ec11` | 1.8" 128×160 ST7735S SPI | 无，纯旋钮 | ESP32 / 4MB | 🆕 新机型，引脚兼容 CYD |
@@ -20,6 +21,7 @@
 | 板型 | 刷机包直链（最新正式版） |
 |---|---|
 | CYD 2432S028R | [ESP-IDFv5.5-cyd_2432s028r.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r.zip) |
+| CYD 2432S028R-PLUS | [ESP-IDFv5.5-cyd_2432s028r_plus.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r_plus.zip) |
 | E32R35T | [ESP-IDFv5.5-e32r35t.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-e32r35t.zip) |
 | esp32s3-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip) |
 | esp32-st7735s-128_160-ec11 | [ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip) |
@@ -69,6 +71,22 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | C / GND | GND | A/B/SW 的公共端接 GND |
 
 自带 A/B 上拉的编码器模块可直接接线。
+
+## CYD 2432S028R-PLUS
+
+![CYD 2432S028R-PLUS](screenshots/boards/cyd_2432s028r_plus.png)
+
+*CYD 的 ST7789 变种（ESP32-WROOM-32E 模组）。同一板族、同一引脚——只有显示驱动 IC 和复位线不同。*
+
+逻辑分辨率 **320×240 横屏**。显示与触摸接线与上面的 CYD 2432S028R **完全相同**（LCD 走 SPI2：SCLK 14 / MOSI 13 / MISO 12 / CS 15 / DC 2 / BL 21；XPT2046 触摸走独立 SPI3：SCLK 25 / MOSI 32 / MISO 39 / CS 33 / IRQ 36；BOOT 键 GPIO0 息屏/唤醒）。差异均由固件处理：
+
+- 显示：**ST7789**（替代 ILI9341），按厂商文档要求 BGR 色序初始化；SPI2 @ 40MHz，DMA 双缓冲
+- **无 LCD 复位脚**（`TFT_RST = -1`）——靠初始化序列内的软件复位
+- 触摸控制器、校准流程与出厂默认值与 CYD 共用（随时可用 `caltouch` 重校）
+
+**可选 EC11 旋转编码器**——本板编码器走 **CN3 排针：A=GPIO23（MOSI）/ B=GPIO19（MISO）/ SW=GPIO18（SCK）**，公共端接 GND。三脚均有内部上拉，裸编码器直插即可，无需外接电阻。注意这三个脚与板载 SD 卡槽共用，不能同时插 SD 卡使用。
+
+个别单元画面颠倒时，在 **设置 → 显示 → 180° 旋转** 切换；颜色反色时在同一页切换反色选项——不用改接线也不用重新编译。
 
 ## E32R35T
 
@@ -365,11 +383,11 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 - **合宙 CORE ESP32-C3**——选 **USB 直连版（非 CH340）**；烧录和串口 CLI 都直接走 Type-C 口（USB-Serial-JTAG），Windows 8 以上免驱
 - **ESP32-C3 Super Mini**——排针只引出 GPIO0–10/20/21，本方案每根线都落在 GPIO0–10 内
 
-ESP32-C3 与其它目标芯片有三点差异，固件已全部处理：**单核**（LVGL 任务不绑核运行）、**无 PCNT 外设**（EC11 改用 GPIO 中断软件正交解码）、合宙板 flash 为**两线 DIO 模式**（固件按 `FLASHMODE_DIO` 构建，Super Mini 同样兼容）。注意：C3 只有 400KB SRAM 且无 PSRAM 可选，堆空间比 ESP32 板紧张——Klipper/Moonraker 是主要使用场景。
+ESP32-C3 与其它目标芯片有三点差异，固件已全部处理：**单核**（LVGL 任务不绑核运行）、**无 PCNT 外设**（EC11 改用 10ms 定时轮询软件正交解码——不用 GPIO 中断，避免悬浮/噪声输入形成中断风暴）、合宙板 flash 为**两线 DIO 模式**（固件按 `FLASHMODE_DIO` 构建，Super Mini 同样兼容）。注意：C3 只有 400KB SRAM 且无 PSRAM 可选，堆空间比 ESP32 板紧张——Klipper/Moonraker 是主要使用场景。
 
 - 主控：ESP32-C3（单核 RISC-V 160MHz，400KB SRAM），4MB flash @ 80MHz **DIO**
 - 显示：ST7789 走 esp_lcd 官方驱动（默认 INVOFF 即正常颜色）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）
-- 输入：仅 EC11（GPIO 中断软件正交解码）；无触摸层，永不进入触摸校准
+- 输入：仅 EC11（定时轮询软件正交解码）；无触摸层，永不进入触摸校准
 - 背光：GPIO4，LEDC PWM 8bit/5kHz，高电平点亮
 - 息屏/唤醒：板载 BOOT 键（GPIO9）
 

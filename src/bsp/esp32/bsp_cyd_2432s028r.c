@@ -1,9 +1,10 @@
 /*
  * BSP: CYD ESP32-2432S028R（2.8" 240x320 ILI9341 + XPT2046 电阻触摸）
+ *   及 CYD ESP32-2432S028R-PLUS（同引脚，面板换 ST7789，无 RST 脚）
  * 逻辑分辨率 320x240 横屏。
  */
 #include "sdkconfig.h"
-#if CONFIG_BOARD_CYD_2432S028R
+#if CONFIG_BOARD_CYD_2432S028R || CONFIG_BOARD_CYD_2432S028R_PLUS
 
 #include "bsp.h"
 #include "bsp_screen_power.h"
@@ -19,7 +20,11 @@
 #include "driver/spi_master.h"
 #include "esp_check.h"
 #include "esp_heap_caps.h"
-#include "esp_lcd_ili9341.h"
+#if defined(CONFIG_BOARD_CYD_2432S028R_PLUS)
+#include "esp_lcd_panel_st7789.h"   /* PLUS：ST7789（IDF esp_lcd 内置驱动） */
+#else
+#include "esp_lcd_ili9341.h"        /* 原版 CYD：ILI9341（managed 组件） */
+#endif
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_touch_xpt2046.h"
@@ -39,7 +44,11 @@
 #define PIN_LCD_MISO   12
 #define PIN_LCD_CS     15
 #define PIN_LCD_DC     2
+#if defined(CONFIG_BOARD_CYD_2432S028R_PLUS)
+#define PIN_LCD_RST    (-1)  /* PLUS 无复位脚（厂商文档 TFT_RST=-1），靠驱动内 SWRESET */
+#else
 #define PIN_LCD_RST    4
+#endif
 #define PIN_LCD_BL     21
 #define PIN_TP_SCLK    25
 #define PIN_TP_MOSI    32
@@ -76,7 +85,8 @@ typedef struct {
     float ym, yc;   /* screen_y = raw_y * ym + yc */
 } touch_cal_t;
 
-/* 本机型（2432S028R）出厂默认值，从真机校准结果提取；
+/* 本机型（2432S028R）出厂默认值，从真机校准结果提取；PLUS 触摸部分与原版
+   完全相同（XPT2046 同引脚同结构），沿用同一默认值。
    文件缺失/损坏时回写该值并直接使用，不会进入校准流程 */
 #define TOUCH_CAL_DEFAULT \
     { -0.081585079f, 325.2913818f, -0.062754944f, 246.2943268f }
@@ -273,15 +283,25 @@ void bsp_delay_ms(uint32_t ms)
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-/* ---------- 反色 / 180° 旋转（运行时生效，设置项由 app 层落盘/回读） ---------- */
-static bool disp_rot180;
+/* ---------- 反色 / 180° 旋转 / 水平镜像（运行时生效，设置项由 app 层落盘/回读） ---------- */
+static bool disp_rot180, disp_mirrorx;
 
 bool bsp_disp_can_invert(void)   { return true; }
 bool bsp_disp_can_rotate180(void) { return true; }
+bool bsp_disp_can_mirror_x(void)  { return true; }
 
 void bsp_disp_set_invert(bool en)
 {
     if (panel_handle) esp_lcd_panel_invert_color(panel_handle, en);
+}
+
+/* 默认 mirror(true,true)。swap_xy 下屏幕水平轴对应面板 Y 轴：
+   panel_mx = 默认 ^ rot180；panel_my = 默认 ^ rot180 ^ mirror_x */
+static void panel_mirror_apply(void)
+{
+    if (panel_handle)
+        esp_lcd_panel_mirror(panel_handle,
+                             !disp_rot180, disp_rot180 == disp_mirrorx);
 }
 
 void bsp_disp_set_rotate180(bool en)
@@ -289,7 +309,13 @@ void bsp_disp_set_rotate180(bool en)
     disp_rot180 = en;
     /* 默认 mirror(true,true)；180° = 两轴都翻 → mirror(false,false)。
        swap_xy 下 mirror 参数仍指面板轴，两轴同翻与 swap 无关 */
-    if (panel_handle) esp_lcd_panel_mirror(panel_handle, !en, !en);
+    panel_mirror_apply();
+}
+
+void bsp_disp_set_mirror_x(bool en)
+{
+    disp_mirrorx = en;
+    panel_mirror_apply();
 }
 
 /* 板级背光实现：本板非零占空比至少 5%，逻辑亮度与息屏状态由公共状态机管理。 */
@@ -387,6 +413,7 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         sx = LCD_H_RES - 1 - sx;
         sy = LCD_V_RES - 1 - sy;
     }
+    if (disp_mirrorx) sx = LCD_H_RES - 1 - sx;   /* 水平镜像：触摸 X 同步翻转 */
     data->state = LV_INDEV_STATE_PRESSED;
     data->point.x = LV_CLAMP(0, sx, LCD_H_RES - 1);
     data->point.y = LV_CLAMP(0, sy, LCD_V_RES - 1);
@@ -497,15 +524,21 @@ void bsp_init(void)
 
     esp_lcd_panel_dev_config_t panel_cfg = {
         .reset_gpio_num = PIN_LCD_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,   /* 面板 BGR 原生（对照 TFT_eSPI ILI9341_2 驱动实测） */
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,   /* 面板 BGR 原生（ILI9341 对照 TFT_eSPI 实测；PLUS 厂商文档同样要求 BGR） */
         .bits_per_pixel = 16,
     };
+#if defined(CONFIG_BOARD_CYD_2432S028R_PLUS)
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(io_handle, &panel_cfg, &panel_handle));
+#else
     ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(io_handle, &panel_cfg, &panel_handle));
+#endif
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
-    /* 横屏 320x240；swap_xy 后屏幕水平轴对应面板 Y 轴，水平镜像要翻 mirror_y */
+    /* 横屏 320x240；swap_xy 后屏幕水平轴对应面板 Y 轴，水平镜像要翻 mirror_y。
+       PLUS(ST7789) 沿用同组方向默认值；个别单元画面颠倒用 设置→显示→180° 翻转 */
     ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel_handle, true));
     ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel_handle, true, true));
+    /* ST7789 默认 INVOFF 即正常颜色，无需强制 INVON */
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
     /* 触摸 XPT2046：取原始 ADC，不做驱动层坐标换算/镜像（由两点校准吸收） */
@@ -551,7 +584,11 @@ void bsp_init(void)
 
     xTaskCreatePinnedToCore(lvgl_task, "lvgl", 12288, NULL, 4, NULL, 1);
 
+#if defined(CONFIG_BOARD_CYD_2432S028R_PLUS)
+    ESP_LOGI(TAG, "BSP ready (2432S028R-PLUS ST7789, %dx%d)", LCD_H_RES, LCD_V_RES);
+#else
     ESP_LOGI(TAG, "BSP ready (2432S028R, %dx%d)", LCD_H_RES, LCD_V_RES);
+#endif
 }
 
 void bsp_restart(void)
@@ -562,4 +599,4 @@ void bsp_restart(void)
     esp_restart();
 }
 
-#endif /* CONFIG_BOARD_CYD_2432S028R */
+#endif /* CONFIG_BOARD_CYD_2432S028R || CONFIG_BOARD_CYD_2432S028R_PLUS */

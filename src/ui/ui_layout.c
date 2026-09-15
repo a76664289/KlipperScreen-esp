@@ -70,6 +70,8 @@ static int small(void) { return scale_f < 1.0f; }
    （KLIPPER_RES 可切分辨率，三档都要）。 */
 #if defined(CONFIG_BOARD_CYD_2432S028R)
 #define UI_FONT_BIG 0
+#elif defined(CONFIG_BOARD_CYD_2432S028R_PLUS)
+#define UI_FONT_BIG 0   /* 320x240 同 CYD */
 #elif defined(CONFIG_BOARD_E32R35T)
 #define UI_FONT_BIG 0
 #elif defined(CONFIG_BOARD_EC11_KNOB_MINIMAL)

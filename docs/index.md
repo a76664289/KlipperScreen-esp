@@ -21,6 +21,7 @@ The separately named SDL2 **simulator** uses mock data for layout development, i
 | Board | Display | Touch | MCU | Status |
 |---|---|---|---|---|
 | CYD 2432S028R | 2.8" 320×240 ILI9341 SPI | XPT2046 resistive | ESP32 | ✅ Stable |
+| CYD 2432S028R-PLUS | 2.8" 320×240 ST7789 SPI | XPT2046 resistive | ESP32-WROOM-32E | 🆕 New, CYD pinout |
 | E32R35T (ESP32-32E 3.5") | 3.5" 480×320 ST7796 SPI | XPT2046 resistive (shared bus) | ESP32-32E | ✅ Stable |
 | esp32s3-st7789-320_240-ec11 | 240×320 ST7789 SPI | None, rotary only | ESP32-S3 N16R8 | ✅ Official reference, contributor tested |
 | esp32-st7735s-128_160-ec11 | 1.8" 128×160 ST7735S SPI | None, rotary only | ESP32 | 🆕 New, CYD-compatible pinout |

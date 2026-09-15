@@ -482,6 +482,8 @@ int  settings_load_display_invert(void)      { return ksc_load_int("display_inve
 bool settings_save_display_invert(int en)    { return ksc_save_int("display_invert", en ? 1 : 0); }
 int  settings_load_display_rotate(void)      { return ksc_load_int("display_rotate", 0) != 0; }
 bool settings_save_display_rotate(int en)    { return ksc_save_int("display_rotate", en ? 1 : 0); }
+int  settings_load_display_mirror(void)      { return ksc_load_int("display_mirrorx", 0) != 0; }
+bool settings_save_display_mirror(int en)    { return ksc_save_int("display_mirrorx", en ? 1 : 0); }
 
 void settings_load_theme(char *out, size_t len)
 {

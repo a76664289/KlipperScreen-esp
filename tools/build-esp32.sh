@@ -4,10 +4,11 @@
 #   tools/build-esp32.sh <board> build          构建
 #   tools/build-esp32.sh <board> flash <port>   构建+烧录（如 COM6 / /dev/ttyUSB0）
 #   tools/build-esp32.sh <board> menuconfig     打开 menuconfig（Board selection 里可改板型）
-#   board: cyd_2432s028r | e32r35t | esp32s3-st7789-320_240-ec11 | esp32-st7735s-128_160-ec11 | esp32-st7789-320_240-ec11 | esp32-ILI9341-320_240-ec11 | esp32-ST7796-320_240-ec11 | esp32s3-st7796-480_320-xpt2046-ec11 | esp32c3-st7789-320_240-ec11 | jc8048w550 | esp32s3-JLC-SZP | esp32s3-retro-go | all
+#   board: cyd_2432s028r | cyd_2432s028r_plus | e32r35t | esp32s3-st7789-320_240-ec11 | esp32-st7735s-128_160-ec11 | esp32-st7789-320_240-ec11 | esp32-ILI9341-320_240-ec11 | esp32-ST7796-320_240-ec11 | esp32s3-st7796-480_320-xpt2046-ec11 | esp32c3-st7789-320_240-ec11 | jc8048w550 | esp32s3-JLC-SZP | esp32s3-retro-go | all
 #
 # 每板型独立的构建目录与 sdkconfig（芯片目标不同，不能混用）：
 #   cyd_2432s028r → ESP32   → build/             sdkconfig（仓库已有完整文件）
+#   cyd_2432s028r_plus → ESP32（ST7789 版 CYD）→ build-cyd-plus/ sdkconfig.cyd_2432s028r_plus
 #   e32r35t       → ESP32   → build-e32r35t/     sdkconfig.e32r35t（首次构建由 defaults 生成）
 #   esp32s3-st7789-320_240-ec11 → ESP32-S3 + ST7789 + EC11 → build-ec11-knob-minimal/ sdkconfig.esp32s3-st7789-320_240-ec11
 #   esp32-st7735s-128_160-ec11  → ESP32 + ST7735S + EC11（引脚对齐 CYD）→ build-ec11-knob-esp32/ sdkconfig.esp32-st7735s-128_160-ec11
@@ -28,6 +29,9 @@ board_conf() {
         cyd_2432s028r)
             TARGET=esp32;   BDIR=build;            SDKCFG=sdkconfig
             DEFS="sdkconfig.defaults;sdkconfig.defaults.cyd_2432s028r" ;;
+        cyd_2432s028r_plus)
+            TARGET=esp32;   BDIR=build-cyd-plus;   SDKCFG=sdkconfig.cyd_2432s028r_plus
+            DEFS="sdkconfig.defaults;sdkconfig.defaults.cyd_2432s028r_plus" ;;
         e32r35t)
             TARGET=esp32;   BDIR=build-e32r35t;    SDKCFG=sdkconfig.e32r35t
             DEFS="sdkconfig.defaults;sdkconfig.defaults.e32r35t" ;;
@@ -61,7 +65,7 @@ board_conf() {
         esp32s3-retro-go)
             TARGET=esp32s3; BDIR=build-esp32s3-retro-go; SDKCFG=sdkconfig.esp32s3-retro-go
             DEFS="sdkconfig.defaults;sdkconfig.defaults.esp32s3-retro-go" ;;
-        *) echo "unknown board: $1 (cyd_2432s028r | e32r35t | esp32s3-st7789-320_240-ec11 | esp32-st7735s-128_160-ec11 | esp32-st7789-320_240-ec11 | esp32-ILI9341-320_240-ec11 | esp32-ST7796-320_240-ec11 | esp32s3-st7796-480_320-xpt2046-ec11 | esp32c3-st7789-320_240-ec11 | jc8048w550 | esp32s3-JLC-SZP | esp32s3-retro-go | all)" >&2; exit 1 ;;
+        *) echo "unknown board: $1 (cyd_2432s028r | cyd_2432s028r_plus | e32r35t | esp32s3-st7789-320_240-ec11 | esp32-st7735s-128_160-ec11 | esp32-st7789-320_240-ec11 | esp32-ILI9341-320_240-ec11 | esp32-ST7796-320_240-ec11 | esp32s3-st7796-480_320-xpt2046-ec11 | esp32c3-st7789-320_240-ec11 | jc8048w550 | esp32s3-JLC-SZP | esp32s3-retro-go | all)" >&2; exit 1 ;;
     esac
 }
 
@@ -81,6 +85,7 @@ BOARD="${1:?board}"; ACT="${2:-build}"
 if [ "$BOARD" = all ]; then
     [ "$ACT" = build ] || { echo "all 只支持 build" >&2; exit 1; }
     build_one cyd_2432s028r
+    build_one cyd_2432s028r_plus
     build_one e32r35t
     build_one esp32s3-st7789-320_240-ec11
     build_one esp32-st7735s-128_160-ec11

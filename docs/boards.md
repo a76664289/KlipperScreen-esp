@@ -3,6 +3,7 @@
 | Board | Build target | Display | Touch | MCU / Flash | Status |
 |---|---|---|---|---|---|
 | [CYD 2432S028R](#cyd-2432s028r) | `cyd_2432s028r` | 2.8" 240×320 ILI9341 SPI | XPT2046 resistive | ESP32 / 4MB | ✅ Stable |
+| [CYD 2432S028R-PLUS](#cyd-2432s028r-plus) | `cyd_2432s028r_plus` | 2.8" 240×320 ST7789 SPI | XPT2046 resistive | ESP32-WROOM-32E / 4MB | 🆕 New, CYD pinout |
 | [E32R35T](#e32r35t) | `e32r35t` | 3.5" 320×480 ST7796U SPI | XPT2046 resistive | ESP32-32E / 4MB | ✅ Stable |
 | [esp32s3-st7789-320_240-ec11](#esp32s3-st7789-320_240-ec11) | `esp32s3-st7789-320_240-ec11` | 240×320 ST7789 SPI | None, rotary only | ESP32-S3 N16R8 / 16MB | ✅ Official reference, contributor tested |
 | [esp32-st7735s-128_160-ec11](#esp32-st7735s-128_160-ec11) | `esp32-st7735s-128_160-ec11` | 1.8" 128×160 ST7735S SPI | None, rotary only | ESP32 / 4MB | 🆕 New, CYD-compatible pinout |
@@ -20,6 +21,7 @@ Flash packages are named `ESP-IDFv5.5-<board>.zip` (asset names carry no version
 | Board | Flash package (latest stable) |
 |---|---|
 | CYD 2432S028R | [ESP-IDFv5.5-cyd_2432s028r.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r.zip) |
+| CYD 2432S028R-PLUS | [ESP-IDFv5.5-cyd_2432s028r_plus.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-cyd_2432s028r_plus.zip) |
 | E32R35T | [ESP-IDFv5.5-e32r35t.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-e32r35t.zip) |
 | esp32s3-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7789-320_240-ec11.zip) |
 | esp32-st7735s-128_160-ec11 | [ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-st7735s-128_160-ec11.zip) |
@@ -69,6 +71,22 @@ The CYD firmware ships with rotary-encoder support enabled (PCNT hardware quadra
 | C / GND | GND | Common contact of A/B/SW to GND |
 
 Encoder modules that already provide pull-ups on A/B can be wired directly.
+
+## CYD 2432S028R-PLUS
+
+![CYD 2432S028R-PLUS](screenshots/boards/cyd_2432s028r_plus.png)
+
+*The ST7789 variant of the CYD (ESP32-WROOM-32E module). Same board family, same pinout — only the display driver IC and the reset line differ.*
+
+Logical resolution **320×240 landscape**. Display and touch wiring is **identical to the CYD 2432S028R above** (LCD on SPI2: SCLK 14 / MOSI 13 / MISO 12 / CS 15 / DC 2 / BL 21; XPT2046 touch on the dedicated SPI3: SCLK 25 / MOSI 32 / MISO 39 / CS 33 / IRQ 36; BOOT key GPIO0 for screen off/wake). The differences, all handled by the firmware:
+
+- Display: **ST7789** (instead of ILI9341), BGR colour order as required by the vendor documentation; SPI2 @ 40MHz, DMA double buffering
+- **No LCD reset pin** (`TFT_RST = -1`) — the driver relies on the in-sequence software reset
+- Touch controller, calibration flow and factory defaults are shared with the CYD (`caltouch` recalibrates any time)
+
+**Optional EC11 rotary encoder** — on this board the encoder uses the **CN3 header: A=GPIO23 (MOSI) / B=GPIO19 (MISO) / SW=GPIO18 (SCK)**, common contact to GND. All three pins have internal pull-ups, so a bare EC11 wires up directly with no external resistors. Note these three pins are shared with the on-board SD card slot — don't use the SD slot at the same time.
+
+If the picture looks flipped on your unit, toggle **Settings → Display → 180° rotation**; if colours look inverted, toggle the invert option on the same page — no rewiring or rebuild needed.
 
 ## E32R35T
 
@@ -365,11 +383,11 @@ A rotary-only build for the tiny **ESP32-C3** boards: a 240×320 ST7789 SPI disp
 - **LuatOS CORE ESP32-C3** — use the **USB-direct version (non-CH340)**; flashing and the serial CLI both go straight through the Type-C port (USB-Serial-JTAG), no driver needed on Windows 8+
 - **ESP32-C3 Super Mini** — only GPIO0–10/20/21 are pinned out, and every wire of this build lands inside GPIO0–10
 
-ESP32-C3 differs from the other targets in three ways, all handled by the firmware: it is **single-core** (the LVGL task runs unpinned), it has **no PCNT peripheral** (the EC11 uses a GPIO-interrupt software quadrature decoder instead), and the LuatOS board wires its flash in **two-wire DIO mode** (the firmware is built with `FLASHMODE_DIO`, which also works on the Super Mini). Heads-up: the C3 has 400KB SRAM and no PSRAM option, so free heap is tighter than on the ESP32 boards — Klipper/Moonraker is the primary use case.
+ESP32-C3 differs from the other targets in three ways, all handled by the firmware: it is **single-core** (the LVGL task runs unpinned), it has **no PCNT peripheral** (the EC11 uses a 10 ms timer-polling software quadrature decoder instead — no GPIO interrupts, so floating/noisy inputs can't cause an interrupt storm), and the LuatOS board wires its flash in **two-wire DIO mode** (the firmware is built with `FLASHMODE_DIO`, which also works on the Super Mini). Heads-up: the C3 has 400KB SRAM and no PSRAM option, so free heap is tighter than on the ESP32 boards — Klipper/Moonraker is the primary use case.
 
 - MCU: ESP32-C3 (single-core RISC-V 160MHz, 400KB SRAM), 4MB flash @ 80MHz **DIO**
 - Display: ST7789 via the esp_lcd driver (normal colour with the default INVOFF); SPI2 @ 40MHz, DMA double buffering (2×320×40)
-- Input: EC11 only (GPIO-interrupt software quadrature); no touch layer, never enters touch calibration
+- Input: EC11 only (timer-polling software quadrature); no touch layer, never enters touch calibration
 - Backlight: GPIO4, LEDC PWM 8bit/5kHz, active high
 - Screen off / wake: on-board BOOT key (GPIO9)
 

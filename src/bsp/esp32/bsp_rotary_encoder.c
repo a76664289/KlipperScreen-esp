@@ -22,8 +22,9 @@ typedef struct {
 #else
     int gpio_a;                 /* 软件解码后端：A/B 相 GPIO */
     int gpio_b;
-    volatile int qdec_state;    /* ISR 里的 4bit 转移索引 */
-    volatile int sw_count;      /* ISR 累计的正交计数（等效 PCNT count） */
+    esp_timer_handle_t qdec_timer;  /* 10ms 轮询定时器 */
+    volatile int qdec_state;    /* 轮询里的 4bit 转移索引 */
+    volatile int sw_count;      /* 轮询累计的正交计数（等效 PCNT count） */
 #endif
     int last_count;
     int remainder;
@@ -41,9 +42,11 @@ typedef struct {
 static const char *TAG = "rotary_encoder";
 
 #if !SOC_PCNT_SUPPORTED
-/* 无 PCNT 芯片（ESP32-C3）的软件正交解码：A/B 双边沿中断，
+/* 无 PCNT 芯片（ESP32-C3）的软件正交解码：10ms 定时器轮询 A/B 电平，
    4bit（旧2位+新2位）状态转移表查 ±1/0。抖动造成的来回跳变在
-   表内净值天然为 0，无需定时消抖（glitch_filter_ns 配置在本后端忽略）。 */
+   表内净值天然为 0，无需定时消抖（glitch_filter_ns 配置在本后端忽略）。
+   不用 GPIO 中断：悬浮/噪声输入不会形成中断风暴，轮转手感对 10ms
+   采样足够（esp_timer 任务上下文，flash 操作期间调度自然挂起，无 IRAM 约束）。 */
 static const int8_t qdec_table[16] = {
     0, -1, 1, 0,
     1, 0, 0, -1,
@@ -51,7 +54,7 @@ static const int8_t qdec_table[16] = {
     0, 1, -1, 0,
 };
 
-static void qdec_isr(void *arg)
+static void qdec_poll(void *arg)
 {
     rotary_ctx_t *ctx = arg;
     int level = (gpio_get_level(ctx->gpio_a) << 1) | gpio_get_level(ctx->gpio_b);
@@ -121,9 +124,9 @@ static void cleanup(rotary_ctx_t *ctx, bool enabled, bool started)
     if (ctx->channel_a) pcnt_del_channel(ctx->channel_a);
     if (ctx->unit) pcnt_del_unit(ctx->unit);
 #else
-    (void)enabled; (void)started;
-    if (ctx->gpio_a >= 0) gpio_isr_handler_remove(ctx->gpio_a);
-    if (ctx->gpio_b >= 0) gpio_isr_handler_remove(ctx->gpio_b);
+    (void)enabled;
+    if (started && ctx->qdec_timer) esp_timer_stop(ctx->qdec_timer);
+    if (ctx->qdec_timer) esp_timer_delete(ctx->qdec_timer);
 #endif
     free(ctx);
 }
@@ -200,7 +203,7 @@ esp_err_t bsp_rotary_encoder_create(const bsp_rotary_encoder_config_t *config,
     if ((err = pcnt_unit_start(ctx->unit)) != ESP_OK) goto fail;
     started = true;
 #else
-    /* 软件解码后端（ESP32-C3 无 PCNT）：A/B 相输入 + 双边沿中断 */
+    /* 软件解码后端（ESP32-C3 无 PCNT）：A/B 相输入 + 10ms 定时轮询 */
     ctx->gpio_a = config->gpio_a;
     ctx->gpio_b = config->gpio_b;
     gpio_config_t phase_config = {
@@ -208,16 +211,19 @@ esp_err_t bsp_rotary_encoder_create(const bsp_rotary_encoder_config_t *config,
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = config->phase_pullups ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_ANYEDGE,
+        .intr_type = GPIO_INTR_DISABLE,
     };
     if ((err = gpio_config(&phase_config)) != ESP_OK) goto fail;
     int level = (gpio_get_level(config->gpio_a) << 1) | gpio_get_level(config->gpio_b);
     ctx->qdec_state = (level << 2) | level;
     ctx->sw_count = 0;
-    err = gpio_install_isr_service(0);
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) goto fail;   /* 别处已安装属正常 */
-    if ((err = gpio_isr_handler_add(config->gpio_a, qdec_isr, ctx)) != ESP_OK) goto fail;
-    if ((err = gpio_isr_handler_add(config->gpio_b, qdec_isr, ctx)) != ESP_OK) goto fail;
+    const esp_timer_create_args_t qdec_timer_args = {
+        .callback = qdec_poll,
+        .arg = ctx,
+        .name = "qdec",
+    };
+    if ((err = esp_timer_create(&qdec_timer_args, &ctx->qdec_timer)) != ESP_OK) goto fail;
+    if ((err = esp_timer_start_periodic(ctx->qdec_timer, 10 * 1000)) != ESP_OK) goto fail;
     started = true;
 #endif
 
@@ -248,7 +254,7 @@ esp_err_t bsp_rotary_encoder_create(const bsp_rotary_encoder_config_t *config,
 #if SOC_PCNT_SUPPORTED
              "pcnt",
 #else
-             "gpio-isr",
+             "timer-poll",
 #endif
              config->gpio_a, config->gpio_b, config->gpio_button,
              config->counts_per_detent, config->reverse ? " reversed" : "");

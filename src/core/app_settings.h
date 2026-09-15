@@ -91,11 +91,13 @@ bool settings_load_bambu_device_slot(int slot, bambu_device_conf_t *out);
 bool settings_save_bambu_device_slot(int slot, const bambu_device_conf_t *in);
 
 /* 显示偏好（同存 klipperscreen.conf）：
- * display_invert=0/1（反色）；display_rotate=0/1（180° 旋转）；theme=dark|light（缺省 dark） */
+ * display_invert=0/1（反色）；display_rotate=0/1（180° 旋转）；display_mirrorx=0/1（水平镜像）；theme=dark|light（缺省 dark） */
 int  settings_load_display_invert(void);
 bool settings_save_display_invert(int en);
 int  settings_load_display_rotate(void);
 bool settings_save_display_rotate(int en);
+int  settings_load_display_mirror(void);
+bool settings_save_display_mirror(int en);
 void settings_load_theme(char *out, size_t len);
 bool settings_save_theme(const char *theme);
 

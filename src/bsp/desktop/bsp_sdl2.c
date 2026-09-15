@@ -172,11 +172,13 @@ void bsp_restart(void)
     exit(0);
 }
 
-/* 桌面端调试前端：反色/旋转不提供（UI 会按 can_* 隐藏开关） */
+/* 桌面端调试前端：反色/旋转/镜像不提供（UI 会按 can_* 隐藏开关） */
 bool bsp_disp_can_invert(void)    { return false; }
 bool bsp_disp_can_rotate180(void) { return false; }
+bool bsp_disp_can_mirror_x(void)  { return false; }
 void bsp_disp_set_invert(bool en)    { LV_UNUSED(en); }
 void bsp_disp_set_rotate180(bool en) { LV_UNUSED(en); }
+void bsp_disp_set_mirror_x(bool en)  { LV_UNUSED(en); }
 
 void bsp_fade_out(uint32_t ms)
 {

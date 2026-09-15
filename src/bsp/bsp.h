@@ -56,6 +56,10 @@ bool bsp_disp_can_invert(void);
 void bsp_disp_set_invert(bool en);
 bool bsp_disp_can_rotate180(void);
 void bsp_disp_set_rotate180(bool en);
+/* 水平镜像（左右翻转）：与 180° 旋转自由组合，触摸坐标同步翻转；
+   支持面与 rotate180 相同（SPI 屏），RGB 屏与桌面端隐藏 */
+bool bsp_disp_can_mirror_x(void);
+void bsp_disp_set_mirror_x(bool en);
 
 /* 内网时间兜底：从 Moonraker 主机的 HTTP Date 头同步系统时间。
    SNTP 已同步则跳过；异步执行不阻塞调用方（desktop 空操作）。 */

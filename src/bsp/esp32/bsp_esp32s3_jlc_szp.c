@@ -222,11 +222,12 @@ void bsp_delay_ms(uint32_t ms)
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-/* ---------- 反色 / 180° 旋转（运行时生效，设置项由 app 层落盘/回读） ---------- */
-static bool disp_rot180;
+/* ---------- 反色 / 180° 旋转 / 水平镜像（运行时生效，设置项由 app 层落盘/回读） ---------- */
+static bool disp_rot180, disp_mirrorx;
 
 bool bsp_disp_can_invert(void)    { return true; }
 bool bsp_disp_can_rotate180(void) { return true; }
+bool bsp_disp_can_mirror_x(void)  { return true; }
 
 void bsp_disp_set_invert(bool en)
 {
@@ -234,11 +235,25 @@ void bsp_disp_set_invert(bool en)
     lcd_cmd_params(en ? ST7789_INVOFF : ST7789_INVON, NULL, 0);
 }
 
+/* 基准横屏 MADCTL 0x68（MX|MV|BGR）；180° = 0xC8。MV 横屏态下屏幕水平轴
+   对应面板行方向，水平镜像 = 翻 MY 位（0x80），与 180° 态自由组合 */
+static void madctl_apply(void)
+{
+    uint8_t v = disp_rot180 ? MADCTL_LAND_180 : MADCTL_LAND;
+    if (disp_mirrorx) v ^= 0x80;
+    lcd_cmd_params(ST7789_MADCTL, &v, 1);
+}
+
 void bsp_disp_set_rotate180(bool en)
 {
     disp_rot180 = en;
-    /* 基准横屏 MADCTL 0x68（MX|MV|BGR）；180° = 0xC8（MY|MV|BGR） */
-    lcd_cmd_params(ST7789_MADCTL, (uint8_t[]){ en ? MADCTL_LAND_180 : MADCTL_LAND }, 1);
+    madctl_apply();
+}
+
+void bsp_disp_set_mirror_x(bool en)
+{
+    disp_mirrorx = en;
+    madctl_apply();
 }
 
 /* 背光：GPIO42 低电平点亮，LEDC 10bit output_invert——duty 越大输出低越久越亮
@@ -318,6 +333,7 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
             sx = LCD_H_RES - 1 - sx;
             sy = LCD_V_RES - 1 - sy;
         }
+        if (disp_mirrorx) sx = LCD_H_RES - 1 - sx;   /* 水平镜像：触摸 X 同步翻转 */
         data->point.x = LV_CLAMP(0, sx, LCD_H_RES - 1);
         data->point.y = LV_CLAMP(0, sy, LCD_V_RES - 1);
     } else {

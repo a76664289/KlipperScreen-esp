@@ -148,18 +148,37 @@ void bsp_disp_set_invert(bool enabled)
     ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_handle, enabled));
 }
 
+static bool disp_rot180, disp_mirrorx;
+
 bool bsp_disp_can_rotate180(void)
 {
     return true;
 }
 
+bool bsp_disp_can_mirror_x(void)
+{
+    return true;
+}
+
+/* Baseline is swap_xy + mirror(true, false), matching PR #6.
+   swap_xy 下屏幕水平轴对应面板 Y 轴：mx = 基线 ^ rot180；my = 基线 ^ rot180 ^ mirror_x */
+static void panel_mirror_apply(void)
+{
+    ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel_handle,
+                                         !disp_rot180,
+                                         disp_rot180 != disp_mirrorx));
+}
+
 void bsp_disp_set_rotate180(bool enabled)
 {
-    /* Baseline is swap_xy + mirror(true, false), matching PR #6. */
-    if (enabled)
-        ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel_handle, false, true));
-    else
-        ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel_handle, true, false));
+    disp_rot180 = enabled;
+    panel_mirror_apply();
+}
+
+void bsp_disp_set_mirror_x(bool enabled)
+{
+    disp_mirrorx = enabled;
+    panel_mirror_apply();
 }
 
 void bsp_fade_out(uint32_t ms)

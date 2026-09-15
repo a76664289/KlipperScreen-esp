@@ -10,6 +10,9 @@ menu "Board selection"
         config BOARD_CYD_2432S028R
             bool "CYD 2432S028R (ESP32, 320x240 ILI9341 + XPT2046)"
 
+        config BOARD_CYD_2432S028R_PLUS
+            bool "CYD 2432S028R-PLUS (ESP32, 320x240 ST7789 + XPT2046)"
+
         config BOARD_E32R35T
             bool "ESP32-32E E32R35T (ESP32, 480x320 ST7796 + XPT2046)"
 

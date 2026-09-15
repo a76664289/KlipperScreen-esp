@@ -182,6 +182,7 @@ static const dict_entry_t dict[] = {
     {"显示设置",        "Display",             "顯示設定",          "Affichage",                 "Display"},
     {"反色",            "Invert colors",       "反色",              "Inverser les couleurs",     "Inverti colori"},
     {"旋转 180°",       "Rotate 180°",         "旋轉 180°",         "Rotation 180°",             "Ruota 180°"},
+    {"水平镜像",         "Mirror horizontal",   "水平鏡像",          "Miroir horizontal",         "Specchio orizzontale"},
     {"深色",            "Dark",                "深色",              "Sombre",                    "Scuro"},
     {"浅色",            "Light",               "淺色",              "Clair",                     "Chiaro"},
     {"背光",            "Backlight",           "背光",              "Rétroéclairage",            "Retroilluminazione"},

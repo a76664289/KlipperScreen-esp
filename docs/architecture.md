@@ -116,6 +116,7 @@ BSP 还有两个配套抽象：
 | board | 芯片 | 屏幕 | 输入 | 显示路径 |
 |---|---|---|---|---|
 | `cyd_2432s028r` | ESP32 | 2.8" 320×240 ILI9341 | XPT2046 电阻触摸 | esp_lcd SPI |
+| `cyd_2432s028r_plus` | ESP32 | 2.8" 320×240 ST7789 | XPT2046 电阻触摸 | esp_lcd SPI |
 | `e32r35t` | ESP32 | 3.5" 480×320 ST7796 | XPT2046 电阻触摸 | esp_lcd SPI |
 | `esp32-st7735s-128_160-ec11` | ESP32 | 1.8" 160×128 ST7735S | EC11 旋钮（无触摸） | esp_lcd SPI |
 | `esp32-st7789-320_240-ec11` | ESP32 | 320×240 ST7789 | EC11 旋钮（无触摸） | esp_lcd SPI |
@@ -147,7 +148,7 @@ EC11（PCNT）/ SDL 滚轮 ─▶ encoder indev ─▶ ui_nav 焦点组 ─▶ �
 息屏按钮 GPIO ────────────▶ 轮询消抖 ─▶ bsp_screen_toggle()
 ```
 
-- 板型 BSP 只创建板载 pointer（有触摸的板）；EC11 旋钮由共享驱动 `src/bsp/esp32/bsp_rotary_encoder.c` 按 Kconfig 创建（有 PCNT 的芯片用 PCNT 计数，ESP32-C3 无 PCNT 走 GPIO 中断软件正交解码）。触摸、触摸+旋钮、纯旋钮都是完整配置。
+- 板型 BSP 只创建板载 pointer（有触摸的板）；EC11 旋钮由共享驱动 `src/bsp/esp32/bsp_rotary_encoder.c` 按 Kconfig 创建（有 PCNT 的芯片用 PCNT 计数，ESP32-C3 无 PCNT 走 10ms 定时轮询软件正交解码——不用 GPIO 中断，避免悬浮/噪声输入形成中断风暴）。触摸、触摸+旋钮、纯旋钮都是完整配置。
 - **XPT2046 电阻触摸需要校准**，参数存 LittleFS `touch.json`；GT911 / FT6336 电容触摸直接报屏幕坐标。
 - `ui_nav`（`src/ui/ui_nav.c`）枚举 encoder/keypad indev 并绑定当前面板的 LVGL group；pointer 刻意不进组，两种交互方式可同时用。每个面板有独立 group，切换面板时激活对应 group；弹窗压入临时组，旋钮不会穿透遮罩。
 - 可操作控件用 `theme_action_card()`（真实 `lv_button`）或 `theme_focusable()` 登记，不靠对象树猜可操作性。同一控件可按输入来源提供不同交互（如 Moonraker 主机行：触摸打开全键盘，旋钮打开 IPv4 四段编辑器）——差异留在控件语义层，不渗入 BSP。

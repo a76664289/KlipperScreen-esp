@@ -31,7 +31,7 @@ bash tools/build-esp32.sh <board> flash COMx     # build and flash
 bash tools/build-esp32.sh all build              # all boards
 ```
 
-Board names: `cyd_2432s028r` / `e32r35t` / `esp32s3-st7789-320_240-ec11` / `esp32-st7735s-128_160-ec11` / `esp32-st7789-320_240-ec11` / `esp32-ILI9341-320_240-ec11` / `esp32-ST7796-320_240-ec11` / `esp32s3-st7796-480_320-xpt2046-ec11` / `jc8048w550` / `esp32s3-JLC-SZP` / `esp32s3-retro-go` / `esp32c3-st7789-320_240-ec11`. Each board has its own build directory and sdkconfig (chip targets differ — never mix them).
+Board names: `cyd_2432s028r` / `cyd_2432s028r_plus` / `e32r35t` / `esp32s3-st7789-320_240-ec11` / `esp32-st7735s-128_160-ec11` / `esp32-st7789-320_240-ec11` / `esp32-ILI9341-320_240-ec11` / `esp32-ST7796-320_240-ec11` / `esp32s3-st7796-480_320-xpt2046-ec11` / `jc8048w550` / `esp32s3-JLC-SZP` / `esp32s3-retro-go` / `esp32c3-st7789-320_240-ec11`. Each board has its own build directory and sdkconfig (chip targets differ — never mix them).
 
 On Windows, always call `idf.py` through the `tools/idf.ps1` wrapper — Git Bash injects `MSYSTEM` into child processes and makes `idf.py` silently no-op.
 

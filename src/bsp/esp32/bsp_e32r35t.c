@@ -286,23 +286,37 @@ void bsp_delay_ms(uint32_t ms)
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-/* ---------- 反色 / 180° 旋转（运行时生效，设置项由 app 层落盘/回读） ---------- */
-static bool disp_rot180;
+/* ---------- 反色 / 180° 旋转 / 水平镜像（运行时生效，设置项由 app 层落盘/回读） ---------- */
+static bool disp_rot180, disp_mirrorx;
 
 bool bsp_disp_can_invert(void)   { return true; }
 bool bsp_disp_can_rotate180(void) { return true; }
+bool bsp_disp_can_mirror_x(void)  { return true; }
 
 void bsp_disp_set_invert(bool en)
 {
     if (panel_handle) esp_lcd_panel_invert_color(panel_handle, en);
 }
 
+/* 默认 mirror(true,true)。swap_xy 下屏幕水平轴对应面板 Y 轴：
+   panel_mx = 默认 ^ rot180；panel_my = 默认 ^ rot180 ^ mirror_x */
+static void panel_mirror_apply(void)
+{
+    if (panel_handle)
+        esp_lcd_panel_mirror(panel_handle,
+                             !disp_rot180, disp_rot180 == disp_mirrorx);
+}
+
 void bsp_disp_set_rotate180(bool en)
 {
     disp_rot180 = en;
-    /* 默认 mirror(true,true)；180° = 两轴都翻 → mirror(false,false)。
-       swap_xy 下 mirror 参数仍指面板轴，两轴同翻与 swap 无关 */
-    if (panel_handle) esp_lcd_panel_mirror(panel_handle, !en, !en);
+    panel_mirror_apply();
+}
+
+void bsp_disp_set_mirror_x(bool en)
+{
+    disp_mirrorx = en;
+    panel_mirror_apply();
 }
 
 /* 板级背光实现：本板非零占空比至少 5%，逻辑亮度与息屏状态由公共状态机管理。 */
@@ -399,6 +413,7 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         sx = LCD_H_RES - 1 - sx;
         sy = LCD_V_RES - 1 - sy;
     }
+    if (disp_mirrorx) sx = LCD_H_RES - 1 - sx;   /* 水平镜像：触摸 X 同步翻转 */
     data->state = LV_INDEV_STATE_PRESSED;
     data->point.x = LV_CLAMP(0, sx, LCD_H_RES - 1);
     data->point.y = LV_CLAMP(0, sy, LCD_V_RES - 1);

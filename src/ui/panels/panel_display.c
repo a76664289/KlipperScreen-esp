@@ -1,5 +1,5 @@
 /*
- * 显示设置：反色 / 180° 旋转（按 BSP 能力显示）+ 背光 / 自动息屏 / 主题。
+ * 显示设置：反色 / 180° 旋转 / 水平镜像（按 BSP 能力显示）+ 背光 / 自动息屏 / 主题。
  * 反色、旋转运行时立即生效并落盘 klipperscreen.conf；主题切换与语言同理——
  * 各面板在 create 时取色一次，热切换要全量重建 UI，故落盘后渐暗重启。
  */
@@ -32,6 +32,16 @@ static void on_rotate_toggle(lv_event_t *e)
     settings_save_display_rotate(en);
     /* 镜像翻转后 GRAM 旧内容按新寻址读出来是错乱的，必须立刻全屏重绘
        （当前屏 + layer_top 的标题栏）；否则要等到切页才恢复正常 */
+    lv_obj_invalidate(lv_screen_active());
+    lv_obj_invalidate(lv_layer_top());
+    lv_refr_now(NULL);
+}
+
+static void on_mirror_toggle(lv_event_t *e)
+{
+    int en = lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED);
+    bsp_disp_set_mirror_x(en);               /* 立即生效（含触摸坐标翻转） */
+    settings_save_display_mirror(en);
     lv_obj_invalidate(lv_screen_active());
     lv_obj_invalidate(lv_layer_top());
     lv_refr_now(NULL);
@@ -84,6 +94,10 @@ static lv_obj_t *create(void)
     }
     if (bsp_disp_can_rotate180()) {
         theme_row_switch(scr, "旋转 180°", y, settings_load_display_rotate(), on_rotate_toggle);
+        y += step;
+    }
+    if (bsp_disp_can_mirror_x()) {
+        theme_row_switch(scr, "水平镜像", y, settings_load_display_mirror(), on_mirror_toggle);
         y += step;
     }
 

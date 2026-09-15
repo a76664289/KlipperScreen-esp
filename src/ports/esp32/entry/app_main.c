@@ -45,6 +45,7 @@ void app_main(void)
 
     bsp_disp_set_invert(settings_load_display_invert());    /* 反色偏好 */
     bsp_disp_set_rotate180(settings_load_display_rotate()); /* 180° 旋转偏好 */
+    bsp_disp_set_mirror_x(settings_load_display_mirror());  /* 水平镜像偏好 */
 
     /* WiFi 自动回连：有 network.conf 就用保存的凭据连接（Moonraker 客户端
        由 printer_model 的 2s 轮询在 WiFi 就绪后拉起） */
