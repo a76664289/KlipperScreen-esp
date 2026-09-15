@@ -83,11 +83,11 @@ typedef struct {
     float ym, yc;   /* screen_y = raw_y * ym + yc */
 } touch_cal_t;
 
-/* 出厂默认值：直接沿用 E32R35T 真机两点校准结果（同款 XPT2046 电阻屏方案，
-   touch.json：{"xCalM":0.13023783,"yCalM":0.08733624,"xCalC":-30.89468,"yCalC":-17.94760}）。
+/* 出厂默认值：从本板首台真机两点校准结果提取
+   （touch.json：{"xCalM":0.13290956616401672,"yCalM":-0.08741258829832077,"xCalC":-32.531059265136719,"yCalC":337.44757080078125}）。
    文件缺失/损坏时回写该值并直接使用；个体偏差大时用 CLI `caltouch` 强制重校 */
 #define TOUCH_CAL_DEFAULT \
-    { 0.13023783266544342f, -30.894680023193359f, 0.0873362421989441f, -17.947597503662109f }
+    { 0.13290956616401672f, -32.531059265136719f, -0.08741258829832077f, 337.44757080078125f }
 
 #define TOUCH_CAL_PATH       "/littlefs/touch.json"
 #define TOUCH_CAL_FORCE_PATH "/littlefs/.caltouch"   /* CLI caltouch 写入的强制校准标记 */

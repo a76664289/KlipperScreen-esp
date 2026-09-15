@@ -57,7 +57,7 @@ Logical resolution **320×240 landscape**.
 | Touch CS / IRQ | 33 / 36 | |
 | BOOT button | 0 | Screen off / wake |
 
-### Optional EC11 rotary encoder
+**Optional EC11 rotary encoder**
 
 The CYD firmware ships with rotary-encoder support enabled (PCNT hardware quadrature decoding). Wire a bare EC11 to the extended IO header; the encoder works alongside the touchscreen — rotate to move the focus, press to confirm.
 
@@ -253,7 +253,7 @@ ST7796 modules at the 320×240 window vary between sellers: if the picture is mi
 
 *A typical board for this target — the Makerbase MKS TS35 V2.0: 480×320 ST7796S display with XPT2046 resistive touch and an integrated EC11 encoder knob.*
 
-A 480×320 resistive-touch build on the **same ESP32-S3-DevKitC-1 N16R8 base as esp32s3-st7789-320_240-ec11**: an ST7796S SPI display and an XPT2046 touch controller **sharing one SPI bus**, plus the EC11 encoder on the unchanged reference pins. Logical resolution **480×320 landscape** (same layout class as the E32R35T). Factory touch calibration is pre-installed (reused from the E32R35T, same XPT2046 resistive scheme); recalibrate any time via the serial CLI `caltouch` — the result is stored in `touch.json` and loaded on boot.
+A 480×320 resistive-touch build on the **same ESP32-S3-DevKitC-1 N16R8 base as esp32s3-st7789-320_240-ec11**: an ST7796S SPI display and an XPT2046 touch controller **sharing one SPI bus**, plus the EC11 encoder on the unchanged reference pins. Logical resolution **480×320 landscape** (same layout class as the E32R35T). Factory touch calibration is pre-installed (extracted from a real MKS TS35 V2.0 two-point calibration); recalibrate any time via the serial CLI `caltouch` — the result is stored in `touch.json` and loaded on boot.
 
 | Module pin | ESP32-S3 pin | Purpose |
 |---|---|---|
@@ -274,6 +274,10 @@ A 480×320 resistive-touch build on the **same ESP32-S3-DevKitC-1 N16R8 base as 
 | Screen-off button (add-on) | GPIO39 → button → GND | One-key screen off / wake; internal pull-up, active-low. The on-board BOOT key (GPIO0) works the same way |
 
 Power the DevKit over USB-C. Both touch and the encoder work at the same time — the touch drives pointer gestures and the encoder drives the focus navigation. Display mirror/rotation follow the E32R35T panel defaults; if your unit looks flipped, toggle **Settings → Display → 180° rotation** instead of rewiring.
+
+This configuration drives the **Makerbase MKS TS35 V2.0** as-is — wire it according to this photo:
+
+![MKS TS35 V2.0 wiring reference](screenshots/boards/mks_ts35_v2_0_wiring.jpg)
 
 ## JC8048W550
 
