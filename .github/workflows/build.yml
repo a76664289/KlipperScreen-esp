@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 13 个板型按芯片合并为 3 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
+  # 14 个板型按芯片合并为 3 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
   # 共享按 shard 分开的 ccache。单板构建失败不中断其余板型：收集失败列表，
   # 上传可用的部分产物与失败日志后，在末尾令 shard 失败。
   firmware:
@@ -65,6 +65,7 @@ jobs:
               cat <<'EOF'
           esp32s3-st7789-320_240-ec11|build-ec11-knob-minimal|sdkconfig.esp32s3-st7789-320_240-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32s3-st7789-320_240-ec11|esp32s3|16MB|0x0
           esp32s3-st7796-480_320-xpt2046-ec11|build-esp32s3-st7796-ec11|sdkconfig.esp32s3-st7796-480_320-xpt2046-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32s3-st7796-480_320-xpt2046-ec11|esp32s3|16MB|0x0
+          esp32s3-ILI9488-480_320-xpt2046-ec11|build-esp32s3-ili9488-ec11|sdkconfig.esp32s3-ILI9488-480_320-xpt2046-ec11|sdkconfig.defaults;sdkconfig.defaults.esp32s3-ILI9488-480_320-xpt2046-ec11|esp32s3|16MB|0x0
           jc8048w550|build-jc8048w550|sdkconfig.jc8048w550|sdkconfig.defaults;sdkconfig.defaults.jc8048w550|esp32s3|16MB|0x0
           esp32s3-JLC-SZP|build-esp32s3-jlc-szp|sdkconfig.esp32s3-JLC-SZP|sdkconfig.defaults;sdkconfig.defaults.esp32s3-JLC-SZP|esp32s3|16MB|0x0
           esp32s3-retro-go|build-esp32s3-retro-go|sdkconfig.esp32s3-retro-go|sdkconfig.defaults;sdkconfig.defaults.esp32s3-retro-go|esp32s3|16MB|0x0
@@ -132,7 +133,7 @@ jobs:
             exit 1
           fi
 
-  # 13 个板型统一打包：只下载三个 shard 聚合 artifact，esptool 只下载一次，
+  # 14 个板型统一打包：只下载三个 shard 聚合 artifact，esptool 只下载一次，
   # 每个 board 生成与逐板打包完全等价的平铺刷机目录
   package:
     runs-on: ubuntu-latest
@@ -173,7 +174,7 @@ jobs:
       - name: Assemble per-board flash packages
         run: |
           set -e
-          BOARDS="cyd_2432s028r cyd_2432s028r_plus e32r35t esp32-st7735s-128_160-ec11 esp32-st7789-320_240-ec11 esp32-ILI9341-320_240-ec11 esp32-ST7796-320_240-ec11 esp32s3-st7789-320_240-ec11 esp32s3-st7796-480_320-xpt2046-ec11 esp32c3-st7789-320_240-ec11 jc8048w550 esp32s3-JLC-SZP esp32s3-retro-go"
+          BOARDS="cyd_2432s028r cyd_2432s028r_plus e32r35t esp32-st7735s-128_160-ec11 esp32-st7789-320_240-ec11 esp32-ILI9341-320_240-ec11 esp32-ST7796-320_240-ec11 esp32s3-st7789-320_240-ec11 esp32s3-st7796-480_320-xpt2046-ec11 esp32s3-ILI9488-480_320-xpt2046-ec11 esp32c3-st7789-320_240-ec11 jc8048w550 esp32s3-JLC-SZP esp32s3-retro-go"
           for board in $BOARDS; do
             case "$board" in
               cyd_2432s028r|cyd_2432s028r_plus|e32r35t|esp32-st7735s-128_160-ec11|esp32-st7789-320_240-ec11|esp32-ILI9341-320_240-ec11|esp32-ST7796-320_240-ec11)
@@ -200,7 +201,7 @@ jobs:
             ls "$dest"
           done
           count=$(ls -d pkg/ESP-IDFv5.5-* | wc -l)
-          [ "$count" -eq 13 ] || { echo "::error::expected 13 board packages, got $count"; exit 1; }
+          [ "$count" -eq 14 ] || { echo "::error::expected 14 board packages, got $count"; exit 1; }
 
       # 聚合 package artifact：内部按 ESP-IDFv5.5-<board> 目录划分
       - uses: actions/upload-artifact@v4
@@ -353,7 +354,7 @@ jobs:
         # 文档站板型页的下载链接依赖这一点
         run: |
           count=$(ls -d dl/pkg/ESP-IDFv5.5-* | wc -l)
-          [ "$count" -eq 13 ] || { echo "::error::expected 13 board packages, got $count"; exit 1; }
+          [ "$count" -eq 14 ] || { echo "::error::expected 14 board packages, got $count"; exit 1; }
           for d in dl/pkg/ESP-IDFv5.5-*; do
             b=$(basename "$d")
             (cd "$d" && zip -r "$GITHUB_WORKSPACE/$b.zip" .)
@@ -376,8 +377,7 @@ jobs:
             每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面模拟器。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
 
             **本版更新 / What's new**
-            - 显示设置新增「水平镜像」开关，触摸坐标同步镜像 / New "Mirror horizontally" switch in Display settings, touch coordinates mirrored accordingly
-            - 新增板型构建 / New board targets: `ESP-IDFv5.5-cyd_2432s028r_plus`（ESP32-2432S028R-PLUS，CYD 的 ST7789 变种）、`ESP-IDFv5.5-esp32c3-st7789-320_240-ec11`（合宙 ESP32-C3 CORE USB 版 / Super Mini + ST7789 + EC11）
+            - 新增板型构建 / New board target: `ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11`（ESP32-S3 + ILI9488 + XPT2046 共总线 + EC11，适配 MKS PI-TS35 V1.0 等 ILI9488 SPI 屏；引脚与 esp32s3-st7796-480_320-xpt2046-ec11 完全兼容 / pin-compatible with the st7796 variant）
           generate_release_notes: true
           # 标签含 wip（如 v0.2.0-wip.1）时标为预发布，不抢占 latest
           prerelease: ${{ contains(github.ref_name, 'wip') }}

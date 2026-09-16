@@ -124,6 +124,7 @@ BSP 还有两个配套抽象：
 | `esp32-ST7796-320_240-ec11` | ESP32 | 320×240 ST7796 | EC11 旋钮（无触摸） | esp_lcd SPI |
 | `esp32s3-st7789-320_240-ec11` | ESP32-S3 | 2" 320×240 ST7789 | EC11 旋钮（无触摸） | esp_lcd SPI |
 | `esp32s3-st7796-480_320-xpt2046-ec11` | ESP32-S3 | 480×320 ST7796S | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
+| `esp32s3-ILI9488-480_320-xpt2046-ec11` | ESP32-S3 | 480×320 ILI9488（18-bit SPI） | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
 | `jc8048w550` | ESP32-S3 | 5" 800×480 RGB 并口 | GT911 电容触摸 | 自研 rgb44（见下） |
 | `esp32s3-JLC-SZP` | ESP32-S3 | 2.0" 320×240 ST7789 | FT6336 电容触摸 | 手动 SPI（见下） |
 | `esp32s3-retro-go` | ESP32-S3 | 3.2" 320×240 ST7789 | GPIO 按键（无触摸） | esp_lcd SPI |

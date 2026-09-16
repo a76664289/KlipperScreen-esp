@@ -11,6 +11,7 @@
 | [esp32-ILI9341-320_240-ec11](#esp32-ili9341-320_240-ec11) | `esp32-ILI9341-320_240-ec11` | 240×320 ILI9341 SPI | None, rotary only | ESP32 / 4MB | 🆕 New, CYD-compatible pinout |
 | [esp32-ST7796-320_240-ec11](#esp32-st7796-320_240-ec11) | `esp32-ST7796-320_240-ec11` | 240×320 ST7796 SPI | None, rotary only | ESP32 / 4MB | 🆕 New, CYD-compatible pinout |
 | [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) | `esp32s3-st7796-480_320-xpt2046-ec11` | 480×320 ST7796S SPI | XPT2046 resistive (shared bus) + EC11 | ESP32-S3 N16R8 / 16MB | 🆕 New |
+| [esp32s3-ILI9488-480_320-xpt2046-ec11](#esp32s3-ili9488-480_320-xpt2046-ec11) | `esp32s3-ILI9488-480_320-xpt2046-ec11` | 3.5" 480×320 ILI9488 SPI | XPT2046 resistive (shared bus) + EC11 | ESP32-S3 N16R8 / 16MB | 🆕 New, MKS PI-TS35 |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB parallel | GT911 capacitive | ESP32-S3 / 16MB | ✅ Stable |
 | [JLC SZP ESP32-S3](#jlc-szp-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 capacitive | ESP32-S3 N16R8 / 16MB | ✅ Verified |
 | [esp32s3-retro-go](#esp32s3-retro-go) | `esp32s3-retro-go` | 3.2" 240×320 ST7789 SPI | None, GPIO buttons | ESP32-S3 / 16MB | 🆕 New |
@@ -29,6 +30,7 @@ Flash packages are named `ESP-IDFv5.5-<board>.zip` (asset names carry no version
 | esp32-ILI9341-320_240-ec11 | [ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip) |
 | esp32-ST7796-320_240-ec11 | [ESP-IDFv5.5-esp32-ST7796-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ST7796-320_240-ec11.zip) |
 | esp32s3-st7796-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip) |
+| esp32s3-ILI9488-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip) |
 | JC8048W550 | [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip) |
 | JLC SZP ESP32-S3 | [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip) |
 | esp32s3-retro-go | [ESP-IDFv5.5-esp32s3-retro-go.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-retro-go.zip) |
@@ -296,6 +298,21 @@ Power the DevKit over USB-C. Both touch and the encoder work at the same time �
 This configuration drives the **Makerbase MKS TS35 V2.0** as-is — wire it according to this photo:
 
 ![MKS TS35 V2.0 wiring reference](screenshots/boards/mks_ts35_v2_0_wiring.jpg)
+
+## esp32s3-ILI9488-480_320-xpt2046-ec11
+
+![MKS PI-TS35 V1.0](screenshots/boards/mks_pi_ts35.png)
+
+*A typical board for this target — the Makerbase MKS PI-TS35 V1.0: a 3.5" 480×320 ILI9488 SPI display with XPT2046 resistive touch (the stock screen of the MKS PI / SKIPR Klipper host boards). Any ILI9488 + XPT2046 SPI module works the same way.*
+
+An ILI9488 twin of [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11): **same ESP32-S3-DevKitC-1 N16R8 base, same wiring** — the display and the XPT2046 share one SPI bus, the EC11 encoder sits on the unchanged reference pins. Logical resolution **480×320 landscape**. With no factory touch data for this panel, **first boot runs the two-point touch calibration automatically**; the result is stored in `touch.json`, and the serial CLI `caltouch` forces recalibration any time.
+
+ILI9488 specifics handled by the firmware:
+
+- Over 4-wire SPI the ILI9488 only accepts **18-bit RGB666 pixels** (COLMOD=0x66). The panel driver ([atanisoft/esp_lcd_ili9488](https://components.espressif.com/components/atanisoft/esp_lcd_ili9488)) converts the framebuffer from RGB565 internally, so pixel traffic is 3 bytes/pixel (~50% more than ST7796 at the same clock)
+- Wiring is **pin-compatible with the st7796 variant** — the pin table of [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) applies as-is (SCK=21, MOSI=47, MISO=2, TFT_CS=41, DC=40, RST=45, BL=42, TOUCH_CS=1, EC11 A/B/SW=13/14/46, BOOT=0, add-on screen-off button=39)
+- If the picture on your unit looks like a negative or is flipped, use **Settings → Display → Invert colours / 180° rotation / Mirror horizontally** — no reflash needed
+- The PI-TS35 plugs into a 2×20 header on the MKS PI host; to wire it to the DevKit, match the header nets (SCK/MOSI/MISO/CS/DC/RST/BL/T_CS) to the table above using the [MKS-TFT-Hardware](https://github.com/makerbase-mks/MKS-TFT-Hardware) schematic
 
 ## JC8048W550
 

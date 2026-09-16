@@ -11,6 +11,7 @@
 | [esp32-ILI9341-320_240-ec11](#esp32-ili9341-320_240-ec11) | `esp32-ILI9341-320_240-ec11` | 240×320 ILI9341 SPI | 无，纯旋钮 | ESP32 / 4MB | 🆕 新机型，引脚兼容 CYD |
 | [esp32-ST7796-320_240-ec11](#esp32-st7796-320_240-ec11) | `esp32-ST7796-320_240-ec11` | 240×320 ST7796 SPI | 无，纯旋钮 | ESP32 / 4MB | 🆕 新机型，引脚兼容 CYD |
 | [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) | `esp32s3-st7796-480_320-xpt2046-ec11` | 480×320 ST7796S SPI | XPT2046 电阻（共总线）+ EC11 | ESP32-S3 N16R8 / 16MB | 🆕 新机型 |
+| [esp32s3-ILI9488-480_320-xpt2046-ec11](#esp32s3-ili9488-480_320-xpt2046-ec11) | `esp32s3-ILI9488-480_320-xpt2046-ec11` | 3.5" 480×320 ILI9488 SPI | XPT2046 电阻（共总线）+ EC11 | ESP32-S3 N16R8 / 16MB | 🆕 新机型，MKS PI-TS35 |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB 并口 | GT911 电容 | ESP32-S3 / 16MB | ✅ 稳定 |
 | [立创实战派 ESP32-S3](#立创实战派-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 电容 | ESP32-S3 N16R8 / 16MB | ✅ 已实机验证 |
 | [esp32s3-retro-go](#esp32s3-retro-go) | `esp32s3-retro-go` | 3.2" 240×320 ST7789 SPI | 无，GPIO 按键 | ESP32-S3 / 16MB | 🆕 新机型 |
@@ -29,6 +30,7 @@
 | esp32-ILI9341-320_240-ec11 | [ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ILI9341-320_240-ec11.zip) |
 | esp32-ST7796-320_240-ec11 | [ESP-IDFv5.5-esp32-ST7796-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32-ST7796-320_240-ec11.zip) |
 | esp32s3-st7796-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-st7796-480_320-xpt2046-ec11.zip) |
+| esp32s3-ILI9488-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip) |
 | JC8048W550 | [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip) |
 | 立创实战派 ESP32-S3 | [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip) |
 | esp32s3-retro-go | [ESP-IDFv5.5-esp32s3-retro-go.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-retro-go.zip) |
@@ -296,6 +298,21 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 这套配置正好可以直接驱动 **Makerbase MKS TS35 V2.0**——接线参考下图：
 
 ![MKS TS35 V2.0 接线参考](screenshots/boards/mks_ts35_v2_0_wiring.jpg)
+
+## esp32s3-ILI9488-480_320-xpt2046-ec11
+
+![MKS PI-TS35 V1.0](screenshots/boards/mks_pi_ts35.png)
+
+*本机型的典型板子——MKS PI-TS35 V1.0：3.5" 480×320 ILI9488 SPI 屏 + XPT2046 电阻触摸（MKS PI / SKIPR Klipper 上位机板的配屏）。任何 ILI9488 + XPT2046 的 SPI 模组都同样适用。*
+
+[esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) 的 ILI9488 孪生机型：**同款 ESP32-S3-DevKitC-1 N16R8 底座、同款接线**——屏与 XPT2046 共用一条 SPI 总线，EC11 旋钮沿用不变的参考引脚。逻辑分辨率 **480×320 横屏**。本面板无出厂触摸数据，**首次开机自动进入两点触摸校准**；结果存 `touch.json`，之后开机直接加载，个体差异可用串口 CLI `caltouch` 强制重校。
+
+固件已处理的 ILI9488 特性：
+
+- ILI9488 走 4 线 SPI 时只收 **18-bit RGB666 像素**（COLMOD=0x66）。面板驱动（[atanisoft/esp_lcd_ili9488](https://components.espressif.com/components/atanisoft/esp_lcd_ili9488)）内部从 RGB565 转换，像素流量为 3 字节/像素（同时钟下比 ST7796 多约 50%）
+- 接线与 st7796 机型**完全兼容**——[esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) 的引脚表原样适用（SCK=21、MOSI=47、MISO=2、TFT_CS=41、DC=40、RST=45、BL=42、TOUCH_CS=1，EC11 A/B/SW=13/14/46，BOOT=0，外挂息屏键=39）
+- 个别个体画面呈底片或方向不对时，用**设置 → 显示 → 反色 / 180° 旋转 / 水平镜像**修正即可，不用重刷固件
+- PI-TS35 原生插 MKS PI 上位机板的 2×20 排母；接到 DevKit 时按 [MKS-TFT-Hardware](https://github.com/makerbase-mks/MKS-TFT-Hardware) 原理图把排母上的 SCK/MOSI/MISO/CS/DC/RST/BL/T_CS 网络对应到上面的引脚表
 
 ## JC8048W550
 

@@ -31,7 +31,7 @@ bash tools/build-esp32.sh <board> flash COMx     # 构建并烧录
 bash tools/build-esp32.sh all build              # 全部板型
 ```
 
-board 取值：`cyd_2432s028r` / `cyd_2432s028r_plus` / `e32r35t` / `esp32s3-st7789-320_240-ec11` / `esp32-st7735s-128_160-ec11` / `esp32-st7789-320_240-ec11` / `esp32-ILI9341-320_240-ec11` / `esp32-ST7796-320_240-ec11` / `esp32s3-st7796-480_320-xpt2046-ec11` / `jc8048w550` / `esp32s3-JLC-SZP` / `esp32s3-retro-go` / `esp32c3-st7789-320_240-ec11`。每板型有独立的构建目录与 sdkconfig（芯片目标不同，不能混用）。
+board 取值：`cyd_2432s028r` / `cyd_2432s028r_plus` / `e32r35t` / `esp32s3-st7789-320_240-ec11` / `esp32-st7735s-128_160-ec11` / `esp32-st7789-320_240-ec11` / `esp32-ILI9341-320_240-ec11` / `esp32-ST7796-320_240-ec11` / `esp32s3-st7796-480_320-xpt2046-ec11` / `esp32s3-ILI9488-480_320-xpt2046-ec11` / `jc8048w550` / `esp32s3-JLC-SZP` / `esp32s3-retro-go` / `esp32c3-st7789-320_240-ec11`。每板型有独立的构建目录与 sdkconfig（芯片目标不同，不能混用）。
 
 在 Windows 上直接调 `idf.py` 要走 `tools/idf.ps1` 包装——Git Bash 会把 `MSYSTEM` 注入子进程，导致 `idf.py` 静默空转。
 
