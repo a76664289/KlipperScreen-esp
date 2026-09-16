@@ -13,7 +13,7 @@ CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 
 # EC11 旋转编码器：A=IO0 B=IO1 SW=IO10（C3 全部 GPIO 有内部上拉，无需外接电阻；
-# C3 无 PCNT 外设，bsp_rotary_encoder 自动走 GPIO 中断软件解码后端，
+# C3 无 PCNT 外设，bsp_rotary_encoder 自动走 2ms esp_timer 轮询解码后端，
 # GLITCH_FILTER_NS 在该后端忽略，保留配置仅为与其他板型对齐）
 CONFIG_INPUT_ROTARY_ENCODER=y
 CONFIG_INPUT_ROTARY_GPIO_A=0

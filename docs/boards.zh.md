@@ -395,12 +395,14 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 ## esp32c3-st7789-320_240-ec11
 
+![ESP32-C3、ST7789 屏幕与 EC11 编码器实机](screenshots/boards/esp32c3_st7789_320_240_ec11.jpg)
+
 为袖珍 **ESP32-C3** 板做的纯旋钮机型：240×320 ST7789 SPI 屏 + EC11 编码器，无触摸。逻辑分辨率 **320×240 横屏**——标准布局档。一个固件镜像同时覆盖两块目标板（接线完全相同）：
 
 - **合宙 CORE ESP32-C3**——选 **USB 直连版（非 CH340）**；烧录和串口 CLI 都直接走 Type-C 口（USB-Serial-JTAG），Windows 8 以上免驱
 - **ESP32-C3 Super Mini**——排针只引出 GPIO0–10/20/21，本方案每根线都落在 GPIO0–10 内
 
-ESP32-C3 与其它目标芯片有三点差异，固件已全部处理：**单核**（LVGL 任务不绑核运行）、**无 PCNT 外设**（EC11 改用 10ms 定时轮询软件正交解码——不用 GPIO 中断，避免悬浮/噪声输入形成中断风暴）、合宙板 flash 为**两线 DIO 模式**（固件按 `FLASHMODE_DIO` 构建，Super Mini 同样兼容）。注意：C3 只有 400KB SRAM 且无 PSRAM 可选，堆空间比 ESP32 板紧张——Klipper/Moonraker 是主要使用场景。
+ESP32-C3 与其它目标芯片有三点差异，固件已全部处理：**单核**（LVGL 任务不绑核运行）、**无 PCNT 外设**（EC11 改用 2ms 定时轮询软件正交解码——不用 GPIO 中断，避免悬浮/噪声输入形成中断风暴）、合宙板 flash 为**两线 DIO 模式**（固件按 `FLASHMODE_DIO` 构建，Super Mini 同样兼容）。注意：C3 只有 400KB SRAM 且无 PSRAM 可选，堆空间比 ESP32 板紧张——Klipper/Moonraker 是主要使用场景。
 
 - 主控：ESP32-C3（单核 RISC-V 160MHz，400KB SRAM），4MB flash @ 80MHz **DIO**
 - 显示：ST7789 走 esp_lcd 官方驱动（默认 INVOFF 即正常颜色）；SPI2 @ 40MHz，DMA 双缓冲（2×320×40）

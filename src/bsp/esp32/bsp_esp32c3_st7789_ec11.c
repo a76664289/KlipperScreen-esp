@@ -13,7 +13,7 @@
  *
  * C3 与现有 ESP32/S3 板型的三个硬件差异：
  *   1. 单核 RISC-V：lvgl 任务不绑核（xTaskCreate 自由调度）；
- *   2. 无 PCNT 外设：EC11 走 bsp_rotary_encoder 的 GPIO 中断软件解码后端；
+ *   2. 无 PCNT 外设：EC11 走 bsp_rotary_encoder 的 2ms 定时轮询解码后端；
  *   3. 合宙板 flash 两线接法：sdkconfig 必须 FLASHMODE_DIO（QIO 点不亮），
  *      控制台走 USB-Serial-JTAG（无 CH340）。
  * 若手上的 ST7789 模组方向/边缘有偏移，调下面的 LCD_MIRROR_X/Y 与 LCD_GAP_X/Y。
@@ -295,7 +295,8 @@ void bsp_init(void)
 
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = PIN_LCD_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_BGR,
+        /* 本批 ST7789 面板 MADCTL BGR=0 才与 LVGL RGB565 色序一致。 */
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 16,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(io, &panel_config,

@@ -12,6 +12,10 @@
 #if SOC_PCNT_SUPPORTED
 #include "driver/pulse_cnt.h"
 #define PCNT_LIMIT 30000
+#else
+/* 500Hz 能覆盖手动快速旋转时的 EC11 四相转移；10ms/100Hz 会在
+   相邻两次采样间跨过多个状态，转移表无法还原已丢失的边沿。 */
+#define QDEC_POLL_US 2000
 #endif
 
 typedef struct {
@@ -22,7 +26,7 @@ typedef struct {
 #else
     int gpio_a;                 /* 软件解码后端：A/B 相 GPIO */
     int gpio_b;
-    esp_timer_handle_t qdec_timer;  /* 10ms 轮询定时器 */
+    esp_timer_handle_t qdec_timer;  /* 2ms 轮询定时器 */
     volatile int qdec_state;    /* 轮询里的 4bit 转移索引 */
     volatile int sw_count;      /* 轮询累计的正交计数（等效 PCNT count） */
 #endif
@@ -42,11 +46,11 @@ typedef struct {
 static const char *TAG = "rotary_encoder";
 
 #if !SOC_PCNT_SUPPORTED
-/* 无 PCNT 芯片（ESP32-C3）的软件正交解码：10ms 定时器轮询 A/B 电平，
+/* 无 PCNT 芯片（ESP32-C3）的软件正交解码：2ms 定时器轮询 A/B 电平，
    4bit（旧2位+新2位）状态转移表查 ±1/0。抖动造成的来回跳变在
    表内净值天然为 0，无需定时消抖（glitch_filter_ns 配置在本后端忽略）。
-   不用 GPIO 中断：悬浮/噪声输入不会形成中断风暴，轮转手感对 10ms
-   采样足够（esp_timer 任务上下文，flash 操作期间调度自然挂起，无 IRAM 约束）。 */
+   不用 GPIO 中断：悬浮/噪声输入不会形成中断风暴。esp_timer 回调已由
+   IDF 高优先级 timer task 派发，丢脉冲的主因是采样率而不是任务优先级。 */
 static const int8_t qdec_table[16] = {
     0, -1, 1, 0,
     1, 0, 0, -1,
@@ -203,7 +207,7 @@ esp_err_t bsp_rotary_encoder_create(const bsp_rotary_encoder_config_t *config,
     if ((err = pcnt_unit_start(ctx->unit)) != ESP_OK) goto fail;
     started = true;
 #else
-    /* 软件解码后端（ESP32-C3 无 PCNT）：A/B 相输入 + 10ms 定时轮询 */
+    /* 软件解码后端（ESP32-C3 无 PCNT）：A/B 相输入 + 2ms 定时轮询 */
     ctx->gpio_a = config->gpio_a;
     ctx->gpio_b = config->gpio_b;
     gpio_config_t phase_config = {
@@ -223,7 +227,7 @@ esp_err_t bsp_rotary_encoder_create(const bsp_rotary_encoder_config_t *config,
         .name = "qdec",
     };
     if ((err = esp_timer_create(&qdec_timer_args, &ctx->qdec_timer)) != ESP_OK) goto fail;
-    if ((err = esp_timer_start_periodic(ctx->qdec_timer, 10 * 1000)) != ESP_OK) goto fail;
+    if ((err = esp_timer_start_periodic(ctx->qdec_timer, QDEC_POLL_US)) != ESP_OK) goto fail;
     started = true;
 #endif
 

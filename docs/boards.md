@@ -395,12 +395,14 @@ Direction keys move the focus, OK activates the focused control, and BACK closes
 
 ## esp32c3-st7789-320_240-ec11
 
+![ESP32-C3 with ST7789 display and EC11 encoder](screenshots/boards/esp32c3_st7789_320_240_ec11.jpg)
+
 A rotary-only build for the tiny **ESP32-C3** boards: a 240×320 ST7789 SPI display plus an EC11 encoder, no touch. Logical resolution **320×240 landscape** — the standard layout class. One firmware image covers both target boards (they share the same wiring):
 
 - **LuatOS CORE ESP32-C3** — use the **USB-direct version (non-CH340)**; flashing and the serial CLI both go straight through the Type-C port (USB-Serial-JTAG), no driver needed on Windows 8+
 - **ESP32-C3 Super Mini** — only GPIO0–10/20/21 are pinned out, and every wire of this build lands inside GPIO0–10
 
-ESP32-C3 differs from the other targets in three ways, all handled by the firmware: it is **single-core** (the LVGL task runs unpinned), it has **no PCNT peripheral** (the EC11 uses a 10 ms timer-polling software quadrature decoder instead — no GPIO interrupts, so floating/noisy inputs can't cause an interrupt storm), and the LuatOS board wires its flash in **two-wire DIO mode** (the firmware is built with `FLASHMODE_DIO`, which also works on the Super Mini). Heads-up: the C3 has 400KB SRAM and no PSRAM option, so free heap is tighter than on the ESP32 boards — Klipper/Moonraker is the primary use case.
+ESP32-C3 differs from the other targets in three ways, all handled by the firmware: it is **single-core** (the LVGL task runs unpinned), it has **no PCNT peripheral** (the EC11 uses a 2 ms timer-polling software quadrature decoder instead — no GPIO interrupts, so floating/noisy inputs can't cause an interrupt storm), and the LuatOS board wires its flash in **two-wire DIO mode** (the firmware is built with `FLASHMODE_DIO`, which also works on the Super Mini). Heads-up: the C3 has 400KB SRAM and no PSRAM option, so free heap is tighter than on the ESP32 boards — Klipper/Moonraker is the primary use case.
 
 - MCU: ESP32-C3 (single-core RISC-V 160MHz, 400KB SRAM), 4MB flash @ 80MHz **DIO**
 - Display: ST7789 via the esp_lcd driver (normal colour with the default INVOFF); SPI2 @ 40MHz, DMA double buffering (2×320×40)

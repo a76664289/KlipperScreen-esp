@@ -41,11 +41,17 @@ void app_main(void)
 #endif
     bsp_set_brightness(settings_load_brightness());   /* 背光偏好（klipperscreen.conf） */
     bsp_set_screen_timeout(settings_load_screen_off());   /* 自动息屏（0=永不） */
-    bsp_lvgl_unlock();
-
+    /* 面板控制命令与 LVGL flush 共用同一个 LCD/SPI 队列，必须在首帧
+       刷新开始前完成，否则 C3 上会与 40 行局部缓冲的 DMA 传输交叉。 */
     bsp_disp_set_invert(settings_load_display_invert());    /* 反色偏好 */
     bsp_disp_set_rotate180(settings_load_display_rotate()); /* 180° 旋转偏好 */
     bsp_disp_set_mirror_x(settings_load_display_mirror());  /* 水平镜像偏好 */
+    bsp_lvgl_unlock();
+
+    /* WiFi/PHY 启动必须放在 UI 创建完成且释放 LVGL 锁之后。
+       尤其 C3 是单核且使用原生 USB-Serial-JTAG：WiFi 启动时即使 USB
+       链路短暂掉线，LVGL 任务也仍能获取锁并继续刷屏。 */
+    bsp_wifi_init();
 
     /* WiFi 自动回连：有 network.conf 就用保存的凭据连接（Moonraker 客户端
        由 printer_model 的 2s 轮询在 WiFi 就绪后拉起） */

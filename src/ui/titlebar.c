@@ -41,8 +41,12 @@ void titlebar_init(void)
     lv_obj_align(btn_back, LV_ALIGN_LEFT_MID, 0, 0);
     lv_obj_add_event_cb(btn_back, back_cb, LV_EVENT_CLICKED, NULL);
 
-    /* WiFi 连接状态小图标（左侧，返回键之后） */
-    bsp_wifi_init();   /* 幂等；提前把后端 WiFi 轮询拉起来 */
+    /* WiFi 连接状态小图标（左侧，返回键之后）。
+       ESP32 的 WiFi/PHY 启动可能阻塞或短暂打断 C3 原生 USB，不能在持有
+       LVGL 锁的 UI 构造路径中执行；ESP32 entry 会在 UI 就绪并解锁后初始化。 */
+#ifndef ESP_PLATFORM
+    bsp_wifi_init();
+#endif
     lbl_wifi = theme_label(bar, LV_SYMBOL_WIFI, THEME_FONT_ICON, THEME_COL_TEXT_DIM);
     lv_obj_align(lbl_wifi, LV_ALIGN_LEFT_MID, ui_px(46), 0);
 
