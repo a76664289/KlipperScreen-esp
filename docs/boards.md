@@ -309,19 +309,53 @@ This configuration drives the **Makerbase MKS TS35 V2.0** as-is — wire it acco
 
 An ILI9488 twin of [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11): **same ESP32-S3-DevKitC-1 N16R8 base, same wiring** — the display and the XPT2046 share one SPI bus, the EC11 encoder sits on the unchanged reference pins. Logical resolution **480×320 landscape**. With no factory touch data for this panel, **first boot runs the two-point touch calibration automatically**; the result is stored in `touch.json`, and the serial CLI `caltouch` forces recalibration any time.
 
+| Module pin | ESP32-S3 pin | Purpose |
+|---|---|---|
+| SCK | GPIO21 | SPI clock — display + touch shared |
+| MOSI (SDA / DIN) | GPIO47 | SPI data out — display data + touch DIN shared |
+| MISO (DOUT) | GPIO2 | SPI data in — XPT2046 coordinate readback |
+| TFT_CS | GPIO41 | Display chip select |
+| TFT_DC (RS / A0) | GPIO40 | Data/command select |
+| TOUCH_CS | GPIO1 | Touch controller chip select |
+| RST / RES | GPIO45 | Display reset; optional — tie to 3.3V or share the MCU reset (the driver also issues a software reset) |
+| BL / LED / BLK | GPIO42 | Backlight, active high (LEDC PWM) |
+| TOUCH_INT (T_IRQ) | — | Leave unconnected — the driver polls; touch wake/tap/drag all work without it |
+| EC11 CLK / A | GPIO13 | Encoder phase A |
+| EC11 DT / B | GPIO14 | Encoder phase B |
+| EC11 SW / KEY | GPIO46 | Encoder press |
+| EC11 + / VCC | 3V3 | Module power |
+| EC11 GND / C | GND | Common contact of A/B/SW to GND |
+| Screen-off button (add-on) | GPIO39 → button → GND | One-key screen off / wake; internal pull-up, active-low. The on-board BOOT key (GPIO0) works the same way |
+
 ILI9488 specifics handled by the firmware:
 
 - Over 4-wire SPI the ILI9488 only accepts **18-bit RGB666 pixels** (COLMOD=0x66). The panel driver ([atanisoft/esp_lcd_ili9488](https://components.espressif.com/components/atanisoft/esp_lcd_ili9488)) converts the framebuffer from RGB565 internally, so pixel traffic is 3 bytes/pixel (~50% more than ST7796 at the same clock)
-- Wiring is **pin-compatible with the st7796 variant** — the pin table of [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) applies as-is (SCK=21, MOSI=47, MISO=2, TFT_CS=41, DC=40, RST=45, BL=42, TOUCH_CS=1, EC11 A/B/SW=13/14/46, BOOT=0, add-on screen-off button=39)
 - If the picture on your unit looks like a negative or is flipped, use **Settings → Display → Invert colours / 180° rotation / Mirror horizontally** — no reflash needed
 - The PI-TS35 plugs into a 2×20 header on the MKS PI host; to wire it to the DevKit, match the header nets (SCK/MOSI/MISO/CS/DC/RST/BL/T_CS) to the table above using the [MKS-TFT-Hardware](https://github.com/makerbase-mks/MKS-TFT-Hardware) schematic
 
 ## esp32s3-ILI9341-320_240-xpt2046-ec11
 
-An ILI9341 twin of [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11): **same ESP32-S3-DevKitC-1 N16R8 base, same wiring** — the display and the XPT2046 share one SPI bus, the EC11 encoder sits on the unchanged reference pins. Logical resolution **320×240 landscape**. With no factory touch data, **first boot runs the two-point touch calibration automatically**; the result is stored in `touch.json`, and the serial CLI `caltouch` forces recalibration any time.
+A 320×240 resistive-touch build on the **ESP32-S3-DevKitC-1 N16R8 base**: an ILI9341 SPI display and an XPT2046 touch controller **sharing one SPI bus**, plus an EC11 encoder on the side. Logical resolution **320×240 landscape**. With no factory touch data, **first boot runs the two-point touch calibration automatically**; the result is stored in `touch.json`, and the serial CLI `caltouch` forces recalibration any time.
 
-- Wiring is **pin-compatible with the st7796 variant** — the pin table of [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) applies as-is (SCK=21, MOSI=47, MISO=2, TFT_CS=41, DC=40, RST=45, BL=42, TOUCH_CS=1, EC11 A/B/SW=13/14/46, BOOT=0, add-on screen-off button=39)
-- The ILI9341 setup reuses the CYD-proven panel parameters (BGR colour order, inversion off); if the picture on your unit looks like a negative or is flipped, use **Settings → Display → Invert colours / 180° rotation / Mirror horizontally** — no reflash needed
+| Module pin | ESP32-S3 pin | Purpose |
+|---|---|---|
+| SCK | GPIO21 | SPI clock — display + touch shared |
+| MOSI (SDA / DIN) | GPIO47 | SPI data out — display data + touch DIN shared |
+| MISO (DOUT) | GPIO2 | SPI data in — XPT2046 coordinate readback |
+| TFT_CS | GPIO41 | Display chip select |
+| TFT_DC (RS / A0) | GPIO40 | Data/command select |
+| TOUCH_CS | GPIO1 | Touch controller chip select |
+| RST / RES | GPIO45 | Display reset; optional — tie to 3.3V or share the MCU reset (the driver also issues a software reset) |
+| BL / LED / BLK | GPIO42 | Backlight, active high (LEDC PWM) |
+| TOUCH_INT (T_IRQ) | — | Leave unconnected — the driver polls; touch wake/tap/drag all work without it |
+| EC11 CLK / A | GPIO13 | Encoder phase A |
+| EC11 DT / B | GPIO14 | Encoder phase B |
+| EC11 SW / KEY | GPIO46 | Encoder press |
+| EC11 + / VCC | 3V3 | Module power |
+| EC11 GND / C | GND | Common contact of A/B/SW to GND |
+| Screen-off button (add-on) | GPIO39 → button → GND | One-key screen off / wake; internal pull-up, active-low. The on-board BOOT key (GPIO0) works the same way |
+
+Power the DevKit over USB-C. The ILI9341 setup reuses the CYD-proven panel parameters (BGR colour order, inversion off); if the picture on your unit looks like a negative or is flipped, use **Settings → Display → Invert colours / 180° rotation / Mirror horizontally** — no reflash needed.
 
 ## JC8048W550
 

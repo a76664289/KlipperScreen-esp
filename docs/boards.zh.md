@@ -309,19 +309,53 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 
 [esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) 的 ILI9488 孪生机型：**同款 ESP32-S3-DevKitC-1 N16R8 底座、同款接线**——屏与 XPT2046 共用一条 SPI 总线，EC11 旋钮沿用不变的参考引脚。逻辑分辨率 **480×320 横屏**。本面板无出厂触摸数据，**首次开机自动进入两点触摸校准**；结果存 `touch.json`，之后开机直接加载，个体差异可用串口 CLI `caltouch` 强制重校。
 
+| 模块引脚 | 接到 ESP32-S3 | 用途 |
+|---|---|---|
+| SCK | GPIO21 | SPI 时钟——屏 + 触摸共用 |
+| MOSI（SDA / DIN） | GPIO47 | SPI 数据出——屏数据 + 触摸 DIN 共用 |
+| MISO（DOUT） | GPIO2 | SPI 数据入——XPT2046 坐标回读 |
+| TFT_CS | GPIO41 | 屏幕片选 |
+| TFT_DC（RS / A0） | GPIO40 | 数据/命令选择 |
+| TOUCH_CS | GPIO1 | 触摸芯片片选 |
+| RST / RES | GPIO45 | 屏幕复位；可省——接 3.3V 常高或共用 MCU 复位（驱动内另有软件复位） |
+| BL / LED / BLK | GPIO42 | 背光，高电平点亮（LEDC PWM） |
+| TOUCH_INT（T_IRQ） | — | 悬空不接——驱动轮询不依赖中断，触摸唤醒/点击/滑动全部照常 |
+| EC11 CLK / A | GPIO13 | 编码器 A 相 |
+| EC11 DT / B | GPIO14 | 编码器 B 相 |
+| EC11 SW / KEY | GPIO46 | 旋钮按下 |
+| EC11 + / VCC | 3V3 | 模块供电 |
+| EC11 GND / C | GND | A/B/SW 公共端接地 |
+| 息屏按钮（外挂） | GPIO39 ── 按键 ── GND | 一键息屏/唤醒，内部上拉、低电平有效；板载 BOOT 键（GPIO0）功能相同 |
+
 固件已处理的 ILI9488 特性：
 
 - ILI9488 走 4 线 SPI 时只收 **18-bit RGB666 像素**（COLMOD=0x66）。面板驱动（[atanisoft/esp_lcd_ili9488](https://components.espressif.com/components/atanisoft/esp_lcd_ili9488)）内部从 RGB565 转换，像素流量为 3 字节/像素（同时钟下比 ST7796 多约 50%）
-- 接线与 st7796 机型**完全兼容**——[esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) 的引脚表原样适用（SCK=21、MOSI=47、MISO=2、TFT_CS=41、DC=40、RST=45、BL=42、TOUCH_CS=1，EC11 A/B/SW=13/14/46，BOOT=0，外挂息屏键=39）
 - 个别个体画面呈底片或方向不对时，用**设置 → 显示 → 反色 / 180° 旋转 / 水平镜像**修正即可，不用重刷固件
 - PI-TS35 原生插 MKS PI 上位机板的 2×20 排母；接到 DevKit 时按 [MKS-TFT-Hardware](https://github.com/makerbase-mks/MKS-TFT-Hardware) 原理图把排母上的 SCK/MOSI/MISO/CS/DC/RST/BL/T_CS 网络对应到上面的引脚表
 
 ## esp32s3-ILI9341-320_240-xpt2046-ec11
 
-[esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) 的 ILI9341 孪生机型：**同款 ESP32-S3-DevKitC-1 N16R8 底座、同款接线**——屏与 XPT2046 共用一条 SPI 总线，EC11 旋钮沿用不变的参考引脚。逻辑分辨率 **320×240 横屏**。无出厂触摸数据，**首次开机自动进入两点触摸校准**；结果存 `touch.json`，之后开机直接加载，个体差异可用串口 CLI `caltouch` 强制重校。
+**ESP32-S3-DevKitC-1 N16R8 底座**的 320×240 电阻触摸机型：ILI9341 SPI 屏与 XPT2046 触摸**共用一条 SPI 总线**，外挂 EC11 旋钮。逻辑分辨率 **320×240 横屏**。无出厂触摸数据，**首次开机自动进入两点触摸校准**；结果存 `touch.json`，之后开机直接加载，个体差异可用串口 CLI `caltouch` 强制重校。
 
-- 接线与 st7796 机型**完全兼容**——[esp32s3-st7796-480_320-xpt2046-ec11](#esp32s3-st7796-480_320-xpt2046-ec11) 的引脚表原样适用（SCK=21、MOSI=47、MISO=2、TFT_CS=41、DC=40、RST=45、BL=42、TOUCH_CS=1，EC11 A/B/SW=13/14/46，BOOT=0，外挂息屏键=39）
-- ILI9341 沿用 CYD 上实测的面板参数（BGR 色彩顺序、不开反色）；个别个体画面呈底片或方向不对时，用**设置 → 显示 → 反色 / 180° 旋转 / 水平镜像**修正即可，不用重刷固件
+| 模块引脚 | 接到 ESP32-S3 | 用途 |
+|---|---|---|
+| SCK | GPIO21 | SPI 时钟——屏 + 触摸共用 |
+| MOSI（SDA / DIN） | GPIO47 | SPI 数据出——屏数据 + 触摸 DIN 共用 |
+| MISO（DOUT） | GPIO2 | SPI 数据入——XPT2046 坐标回读 |
+| TFT_CS | GPIO41 | 屏幕片选 |
+| TFT_DC（RS / A0） | GPIO40 | 数据/命令选择 |
+| TOUCH_CS | GPIO1 | 触摸芯片片选 |
+| RST / RES | GPIO45 | 屏幕复位；可省——接 3.3V 常高或共用 MCU 复位（驱动内另有软件复位） |
+| BL / LED / BLK | GPIO42 | 背光，高电平点亮（LEDC PWM） |
+| TOUCH_INT（T_IRQ） | — | 悬空不接——驱动轮询不依赖中断，触摸唤醒/点击/滑动全部照常 |
+| EC11 CLK / A | GPIO13 | 编码器 A 相 |
+| EC11 DT / B | GPIO14 | 编码器 B 相 |
+| EC11 SW / KEY | GPIO46 | 旋钮按下 |
+| EC11 + / VCC | 3V3 | 模块供电 |
+| EC11 GND / C | GND | A/B/SW 公共端接地 |
+| 息屏按钮（外挂） | GPIO39 ── 按键 ── GND | 一键息屏/唤醒，内部上拉、低电平有效；板载 BOOT 键（GPIO0）功能相同 |
+
+开发板从 USB-C 供电。ILI9341 沿用 CYD 上实测的面板参数（BGR 色彩顺序、不开反色）；个别个体画面呈底片或方向不对时，用**设置 → 显示 → 反色 / 180° 旋转 / 水平镜像**修正即可，不用重刷固件。
 
 ## JC8048W550
 
