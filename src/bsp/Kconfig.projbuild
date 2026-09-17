@@ -43,6 +43,9 @@ menu "Board selection"
         config BOARD_ESP32S3_ILI9488_EC11
             bool "esp32s3-ILI9488-480_320-xpt2046-ec11 (ESP32-S3 + 480x320 ILI9488 + XPT2046 + EC11)"
 
+        config BOARD_ESP32S3_ILI9341_EC11
+            bool "esp32s3-ILI9341-320_240-xpt2046-ec11 (ESP32-S3 + 320x240 ILI9341 + XPT2046 + EC11)"
+
         config BOARD_ESP32S3_RETRO_GO
             bool "esp32s3-retro-go (Chaeng retro-go ESP32-S3 掌机, 3.2\" 320x240 ST7789 + GPIO 按键)"
 
