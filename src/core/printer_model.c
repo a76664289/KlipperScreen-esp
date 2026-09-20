@@ -253,12 +253,25 @@ void printer_firmware_restart(void){ if (klipper_active()) klipper_firmware_rest
 
 /* ---------- GCode 文件列表 ----------
  * server.files.list {"root":"gcodes"} → moonraker_rpc 应答在 LVGL 上下文
- * 回到这里解析，再转发给面板回调。同时只允许一个在途请求（单面板使用场景）。 */
+ * 回到这里解析，再转发给面板回调。同时只允许一个在途请求（单面板使用场景）。
+ * 在途请求必须有失败兜底：超大列表的应答可能被底层整条丢弃（rx 缓冲/解析/
+ * 投递任一环节 OOM），不复位会把面板卡死在"加载中"（issue #8）。 */
+#define FILES_REQ_TIMEOUT_MS 15000
 static struct {
     printer_files_cb cb;
     void *ud;
     bool in_flight;
+    uint32_t start_ms;
 } files_req;
+
+/* 在途请求失败收尾：清标记并回调失败（count=-1）。LVGL 上下文调用。 */
+static void files_req_fail(void)
+{
+    printer_files_cb cb = files_req.cb;
+    void *ud = files_req.ud;
+    files_req.in_flight = false;
+    if (cb) cb(NULL, -1, ud);
+}
 
 static void on_files_list(char *json, void *ud)
 {
@@ -276,6 +289,7 @@ static void on_files_list(char *json, void *ud)
     if (arr) {
         int n = cJSON_GetArraySize(arr);
         files = n > 0 ? calloc(n, sizeof(printer_file_t)) : NULL;
+        if (n > 0 && !files) count = -1;   /* 堆不足：按失败处理，别误报"空列表" */
         cJSON *it;
         cJSON_ArrayForEach(it, arr) {
             if (!files) break;
@@ -304,6 +318,7 @@ bool printer_files_refresh(printer_files_cb cb, void *ud)
     files_req.cb = cb;
     files_req.ud = ud;
     files_req.in_flight = true;
+    files_req.start_ms = lv_tick_get();
     if (!moonraker_rpc("server.files.list", "{\"root\":\"gcodes\"}", on_files_list, NULL)) {
         files_req.in_flight = false;
         return false;
@@ -346,7 +361,11 @@ static void evaluate_state(void)
 void printer_model_set_online(int online)
 {
     M.online = online;
-    if (!online) M.rtt_ms = 0;   /* 断线后延迟值失效 */
+    if (!online) {
+        M.rtt_ms = 0;   /* 断线后延迟值失效 */
+        /* 断线时底层 clear_pending 直接丢在途请求且无回调，这里补失败收尾 */
+        if (files_req.in_flight) files_req_fail();
+    }
     evaluate_state();
 }
 
@@ -375,6 +394,11 @@ static void jstr(cJSON *obj, const char *key, char *out, size_t len)
 
 void printer_model_apply_status_json(char *json_heap)
 {
+    /* 文件列表在途请求的超时兜底：应答被底层整条丢弃时（大列表 OOM 等）
+     * 主动判失败，防面板卡死在"加载中"。状态推送在线时约 4Hz，顺带巡检。 */
+    if (files_req.in_flight && lv_tick_elaps(files_req.start_ms) > FILES_REQ_TIMEOUT_MS)
+        files_req_fail();
+
     cJSON *status = cJSON_Parse(json_heap);
     free(json_heap);
     if (!status) return;
