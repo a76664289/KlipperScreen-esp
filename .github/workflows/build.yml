@@ -378,8 +378,7 @@ jobs:
             每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面模拟器。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
 
             **本版更新 / What's new**
-            - 新增板型构建 / New board target: `ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11`（ESP32-S3 + ILI9341 320×240 + XPT2046 共总线 + EC11；引脚与 esp32s3-st7796-480_320-xpt2046-ec11 完全兼容 / pin-compatible with the st7796 variant）
-            - ESP32-C3 机型显示与编码器稳定性修复 / ESP32-C3 display and encoder stability fixes
+            - 修复：历史 GCode 文件很多时打开"打印文件"卡死并重启（issue #8，无 PSRAM 的 esp32 机型）/ Fixed hang + reboot when opening the file list with many gcode files — 列表分批构建防看门狗、行数上限防 OOM（超限截断并提示）、请求失败兜底防卡"加载中"（progressive row build, row cap with overflow hint, failure watchdog）
           generate_release_notes: true
           # 标签含 wip（如 v0.2.0-wip.1）时标为预发布，不抢占 latest
           prerelease: ${{ contains(github.ref_name, 'wip') }}
