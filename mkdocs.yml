@@ -42,6 +42,7 @@ plugins:
             Home: 首页
             Screenshots: 界面展示
             Supported boards: 支持的板子
+            Display and encoder settings: 显示与编码器设置
             Porting to your own board: 移植到自己的开发板
             Contributing a new board: 贡献新板型（PR 指南）
             Developer notes: 开发笔记
@@ -55,6 +56,7 @@ nav:
   - Home: index.md
   - Screenshots: screenshots.md
   - Supported boards: boards.md
+  - Display and encoder settings: display-settings.md
   - Porting to your own board: porting.md
   - Contributing a new board: contributing-board.md
   - Developer notes:

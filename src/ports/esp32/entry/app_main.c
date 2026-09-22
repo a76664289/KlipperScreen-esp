@@ -34,6 +34,11 @@ void app_main(void)
 
     bsp_lvgl_lock();
     bsp_input_init();      /* 可选附加输入（Kconfig 旋转编码器），可与触摸并存 */
+#if BSP_HAS_ROTARY_ENCODER
+    bsp_encoder_set_counts_per_detent(settings_load_encoder_counts());
+  #endif
+    if (bsp_disp_can_color_order())
+        bsp_disp_set_color_order(settings_load_display_color_order());
     boot_anim_play(bsp_lcd_push, bsp_delay_ms);   /* 「Umeko」开机动画（~2.5s） */
     ui_app_create();       /* 与 desktop 后端共享的同一份 UI 代码 */
 #if BSP_HAS_BUTTONS

@@ -13,6 +13,13 @@ void bsp_init(void);
 /* 可选附加输入：ESP32 按 Kconfig 建旋钮；desktop 建鼠标滚轮模拟器。 */
 void bsp_input_init(void);
 
+/* 编码器每格正交计数（不是每圈格数）。0 = 编译时板型默认，1..8 = 覆盖。
+ * 运行时调用须持 LVGL 锁；切换会丢弃未完成的一格，避免焦点突然跳动。
+ * 无编码器后端：getter 返回 0，setter 返回 false。 */
+int  bsp_encoder_get_counts_per_detent(void);
+int  bsp_encoder_default_counts_per_detent(void);
+bool bsp_encoder_set_counts_per_detent(int counts);
+
 lv_display_t *bsp_get_display(void);
 
 /* LVGL 线程互斥（所有 LVGL API 调用必须持锁） */
@@ -60,6 +67,20 @@ void bsp_disp_set_rotate180(bool en);
    支持面与 rotate180 相同（SPI 屏），RGB 屏与桌面端隐藏 */
 bool bsp_disp_can_mirror_x(void);
 void bsp_disp_set_mirror_x(bool en);
+
+/* 面板色序，与反色、RGB565 字节序独立；DEFAULT 保留板型实测默认。
+ * 注册成功的后端才展示设置。调用须持 LVGL 锁，false 表示应用失败。
+ * SPI LCD 后端及显式桌面预览注册；RGB 并口屏保持原显示路径。 */
+typedef enum {
+    BSP_COLOR_ORDER_DEFAULT = 0,
+    BSP_COLOR_ORDER_RGB = 1,
+    BSP_COLOR_ORDER_BGR = 2,
+} bsp_color_order_t;
+typedef bool (*bsp_color_order_apply_t)(bool bgr);
+void bsp_disp_color_order_register(bool default_bgr, bsp_color_order_apply_t apply);
+bool bsp_disp_can_color_order(void);
+bsp_color_order_t bsp_disp_get_color_order(void);
+bool bsp_disp_set_color_order(bsp_color_order_t order);
 
 /* 内网时间兜底：从 Moonraker 主机的 HTTP Date 头同步系统时间。
    SNTP 已同步则跳过；异步执行不阻塞调用方（desktop 空操作）。 */

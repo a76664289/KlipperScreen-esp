@@ -378,6 +378,10 @@ jobs:
             每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面模拟器。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
 
             **本版更新 / What's new**
+            - 新增：设置 → 显示设置中的编码器步进 **1 / 2 / 4**（仅带编码器的 ESP32 构建），20 秒试用，确认才保存，取消/返回/超时自动恢复 / Encoder counts per detent with a safe 20-second trial and rollback
+            - 新增：独立屏幕色序页面，**默认 / RGB / BGR** 三行单选及本地化红绿蓝色块；支持的 SPI LCD 即时生效并记忆，旋转/镜像保留选择 / Persistent color order for supported SPI LCDs, with localized test swatches
+            - 完善：小屏与五语言交互、新增繁体字形；正式桌面程序不包含硬件设置预览项 / Small-screen and five-language UI, additional Traditional Chinese glyphs; desktop preview switches remain off in release builds
+            - 使用说明 / Guide: https://umeiko.github.io/KlipperScreen-esp/display-settings/ （中文：https://umeiko.github.io/KlipperScreen-esp/zh/display-settings/）
             - 修复：历史 GCode 文件很多时打开"打印文件"卡死并重启（issue #8，无 PSRAM 的 esp32 机型）/ Fixed hang + reboot when opening the file list with many gcode files — 列表分批构建防看门狗、行数上限防 OOM（超限截断并提示）、请求失败兜底防卡"加载中"（progressive row build, row cap with overflow hint, failure watchdog）
             - 加固：状态推送链自检与自愈（针对"进度/温度冻结但控制正常"类故障）/ Status-feed watchdog & self-heal — 去重闸卡死 5s 自清；READY 后 30s 无状态合入先自动重订阅、再 30s 仍无则强拆重连；订阅发送失败 2s 自动重试；串口 `status` 新增 `status_age`/`gate` 诊断字段
           generate_release_notes: true

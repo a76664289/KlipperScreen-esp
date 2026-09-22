@@ -89,7 +89,10 @@ menu "Optional input devices"
         depends on INPUT_ROTARY_ENCODER
         help
             Most full-step EC11 encoders produce four PCNT counts per click.
-            Use 2 or 1 if one physical click skips multiple UI items.
+            Use 2 or 1 if several physical clicks are needed for one UI item.
+            Increase the value if one physical click skips multiple UI items.
+            Encoder-equipped firmware also allows a confirmed runtime override
+            under Settings -> Display -> Encoder step.
 
     config INPUT_ROTARY_PHASE_PULLUPS
         bool "Enable internal pull-ups on encoder A/B"
