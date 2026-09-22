@@ -5,7 +5,7 @@
  *   wifi <ssid> <pass>     连接 AP（pass 为空则按开放网络连；含空格需整体作为其余行内容）
  *   mr <host> [port]       保存 moonraker.conf 并重连
  *   mrstart                按已存配置启动 moonraker 客户端
- *   status                 打印 wifi / moonraker 状态
+ *   status                 打印 wifi / moonraker 状态（含状态推送健康度 status_age/gate）
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -406,8 +406,10 @@ static void cli_handle(char *line)
         printf("lcdstat: 仅 JC8048W550（rgb44）支持\n");
 #endif
     } else if (!strcmp(line, "status")) {
-        printf("wifi=%s moonraker=%d rtt=%dms\n", wifi_state_str(bsp_wifi_status()),
-               (int)moonraker_state(), printer_rtt_ms());
+        printf("wifi=%s moonraker=%d rtt=%dms status_age=%ds gate=%d\n",
+               wifi_state_str(bsp_wifi_status()),
+               (int)moonraker_state(), printer_rtt_ms(),
+               moonraker_status_age_s(), (int)moonraker_status_gate_pending());
     } else if (line[0]) {
         printf("unknown: '%s' (try help)\n", line);
     }
