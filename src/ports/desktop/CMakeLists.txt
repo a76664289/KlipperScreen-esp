@@ -34,6 +34,7 @@ set(DESKTOP_COMMON_SRCS
     main.c
     ${SRC_ROOT}/bsp/bsp_screen_power.c
     ${SRC_ROOT}/bsp/bsp_display_color.c
+    ${SRC_ROOT}/core/file_list_stream.c
     ${SRC_ROOT}/bsp/desktop/bsp_sdl2.c
     ${SRC_ROOT}/bsp/desktop/bsp_wifi_windows.c
     ${SRC_ROOT}/bsp/desktop/bsp_wifi_linux.c

@@ -15,6 +15,10 @@
 #include "bambu_cloud.h"
 #include "bambu_monitor.h"
 #include "bsp_wifi.h"
+#include "file_list_stream.h"
+#ifdef ESP_PLATFORM
+#include "moonraker_files_esp32.h"
+#endif
 
 #include "cJSON.h"
 #include "lvgl.h"
@@ -251,17 +255,18 @@ void printer_print_cancel(void) { if (klipper_active()) klipper_print_cancel(); 
 void printer_emergency_stop(void)  { if (klipper_active()) klipper_emergency_stop(); }
 void printer_firmware_restart(void){ if (klipper_active()) klipper_firmware_restart(); }
 
-/* ---------- GCode 文件列表 ----------
- * server.files.list {"root":"gcodes"} → moonraker_rpc 应答在 LVGL 上下文
- * 回到这里解析，再转发给面板回调。同时只允许一个在途请求（单面板使用场景）。
- * 在途请求必须有失败兜底：超大列表的应答可能被底层整条丢弃（rx 缓冲/解析/
- * 投递任一环节 OOM），不复位会把面板卡死在"加载中"（issue #8）。 */
-#define FILES_REQ_TIMEOUT_MS 15000
+/* Bounded GCode pages: ESP32 uses an independent streaming HTTP worker.
+ * Desktop transports retain RPC but parse its result one record at a time.
+ * One active request; page lifetime is limited to the callback, stale replies
+ * are rejected by generation, and timeout is polled without status traffic. */
+#define FILES_REQ_TIMEOUT_MS 25000
 static struct {
     printer_files_cb cb;
     void *ud;
     bool in_flight;
     uint32_t start_ms;
+    uintptr_t generation;
+    unsigned offset;
 } files_req;
 
 /* 在途请求失败收尾：清标记并回调失败（count=-1）。LVGL 上下文调用。 */
@@ -269,48 +274,27 @@ static void files_req_fail(void)
 {
     printer_files_cb cb = files_req.cb;
     void *ud = files_req.ud;
-    files_req.in_flight = false;
-    if (cb) cb(NULL, -1, ud);
+    printer_files_cancel();
+    if (cb) cb(NULL, ud);
 }
 
+#ifndef ESP_PLATFORM
 static void on_files_list(char *json, void *ud)
 {
-    (void)ud;
+    if (!files_req.in_flight || (uintptr_t)ud != files_req.generation) { free(json); return; }
     printer_files_cb cb = files_req.cb;
     void *cb_ud = files_req.ud;
     files_req.in_flight = false;
 
-    printer_file_t *files = NULL;
-    int count = 0;
-
-    cJSON *arr = json ? cJSON_Parse(json) : NULL;
+    file_list_stream_t stream;
+    file_list_stream_init(&stream, files_req.offset);
+    bool ok = json && file_list_stream_feed(&stream, json, strlen(json)) && file_list_stream_finish(&stream);
     free(json);
-    if (!arr) count = -1;   /* RPC 错误/解析失败：区别于"空列表" */
-    if (arr) {
-        int n = cJSON_GetArraySize(arr);
-        files = n > 0 ? calloc(n, sizeof(printer_file_t)) : NULL;
-        if (n > 0 && !files) count = -1;   /* 堆不足：按失败处理，别误报"空列表" */
-        cJSON *it;
-        cJSON_ArrayForEach(it, arr) {
-            if (!files) break;
-            cJSON *path = cJSON_GetObjectItem(it, "path");
-            cJSON *size = cJSON_GetObjectItem(it, "size");
-            if (!cJSON_IsString(path) || !cJSON_IsNumber(size)) continue;   /* 目录无 size，跳过 */
-            if (path->valuestring[0] == '.') continue;                      /* 隐藏文件 */
-            printer_file_t *f = &files[count++];
-            strncpy(f->name, path->valuestring, sizeof(f->name) - 1);
-            f->size = (uint32_t)size->valuedouble;
-            cJSON *mod = cJSON_GetObjectItem(it, "modified");
-            f->modified = cJSON_IsNumber(mod) ? mod->valuedouble : 0;
-        }
-        cJSON_Delete(arr);
-    }
-
-    if (cb) cb(files, count, cb_ud);
-    else    free(files);
+    if (cb) cb(ok ? &stream.page : NULL, cb_ud);
 }
+#endif
 
-bool printer_files_refresh(printer_files_cb cb, void *ud)
+bool printer_files_refresh(unsigned offset, printer_files_cb cb, void *ud)
 {
     if (!klipper_active() || !cb || files_req.in_flight ||
         M.state == PRINTER_STATE_DISCONNECTED)
@@ -319,11 +303,45 @@ bool printer_files_refresh(printer_files_cb cb, void *ud)
     files_req.ud = ud;
     files_req.in_flight = true;
     files_req.start_ms = lv_tick_get();
-    if (!moonraker_rpc("server.files.list", "{\"root\":\"gcodes\"}", on_files_list, NULL)) {
+    files_req.offset = offset;
+    files_req.generation++;
+#ifdef ESP_PLATFORM
+    bool started = moonraker_files_start(offset);
+#else
+    bool started = moonraker_rpc("server.files.list", "{\"root\":\"gcodes\"}", on_files_list,
+                                 (void *)files_req.generation);
+#endif
+    if (!started) {
         files_req.in_flight = false;
         return false;
     }
     return true;
+}
+
+void printer_files_cancel(void)
+{
+    files_req.in_flight = false;
+    files_req.cb = NULL;
+    files_req.generation++;
+#ifdef ESP_PLATFORM
+    moonraker_files_cancel();
+#endif
+}
+
+void printer_files_poll(void)
+{
+    if (!files_req.in_flight) return;
+#ifdef ESP_PLATFORM
+    printer_file_page_t page;
+    if (moonraker_files_poll(&page)) {
+        printer_files_cb cb = files_req.cb;
+        void *ud = files_req.ud;
+        files_req.in_flight = false;
+        if (cb) cb(page.count < 0 ? NULL : &page, ud);
+        return;
+    }
+#endif
+    if (lv_tick_elaps(files_req.start_ms) > FILES_REQ_TIMEOUT_MS) files_req_fail();
 }
 
 void printer_file_delete(const char *name)

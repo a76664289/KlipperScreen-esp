@@ -48,6 +48,7 @@ plugins:
             Developer notes: 开发笔记
             Architecture: 架构说明
             Building from source: 从源码构建
+            File-list issue 8 retest: 文件列表 issue 8 复测
             JC8048W550 RGB display guide: JC8048W550 RGB 屏排障指南
             Klipper / Moonraker API notes: Klipper / Moonraker API 笔记
             LVGL v9 API notes: LVGL v9 API 笔记
@@ -62,6 +63,7 @@ nav:
   - Developer notes:
       - Architecture: architecture.md
       - Building from source: building.md
+      - File-list issue 8 retest: issue-8-file-list.md
       - JC8048W550 RGB display guide: jc8048w550-rgb-display-guide.md
       - Klipper / Moonraker API notes: klipper-moonraker-api.md
       - LVGL v9 API notes: lvgl-v9-api-notes.md

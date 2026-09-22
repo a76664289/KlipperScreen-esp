@@ -98,6 +98,10 @@ jobs:
             cp "$bdir/bootloader/bootloader.bin" \
                "$bdir/partition_table/partition-table.bin" \
                "$bdir/klipper_remote_display.bin" "$dest/" || return 1
+            if [[ "$GITHUB_REF_NAME" == *wip* ]]; then
+              mkdir -p "$GITHUB_WORKSPACE/symbols"
+              cp "$bdir/klipper_remote_display.elf" "$GITHUB_WORKSPACE/symbols/$board.elf" || return 1
+            fi
             # 板型参数随产物走：刷机脚本读 flash.cfg 决定 chip/flash 大小/bootloader 偏移
             printf 'CHIP=%s\nFLASH_SIZE=%s\nBL_OFFSET=%s\n' "$chip" "$flash_size" "$bl_offset" > "$dest/flash.cfg"
             rm -f "$log"   # 成功板的构建日志不留档
@@ -125,6 +129,15 @@ jobs:
         with:
           name: firmware-${{ matrix.shard }}
           path: artifacts/
+          if-no-files-found: warn
+
+      - name: Preserve exact pre-release debug symbols
+        if: ${{ always() && contains(github.ref_name, 'wip') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-symbols-${{ matrix.shard }}-${{ github.ref_name }}
+          path: symbols/*.elf
+          retention-days: 30
           if-no-files-found: warn
 
       - name: Report failed boards
@@ -382,7 +395,9 @@ jobs:
             - 新增：独立屏幕色序页面，**默认 / RGB / BGR** 三行单选及本地化红绿蓝色块；支持的 SPI LCD 即时生效并记忆，旋转/镜像保留选择 / Persistent color order for supported SPI LCDs, with localized test swatches
             - 完善：小屏与五语言交互、新增繁体字形；正式桌面程序不包含硬件设置预览项 / Small-screen and five-language UI, additional Traditional Chinese glyphs; desktop preview switches remain off in release builds
             - 使用说明 / Guide: https://umeiko.github.io/KlipperScreen-esp/display-settings/ （中文：https://umeiko.github.io/KlipperScreen-esp/zh/display-settings/）
-            - 修复：历史 GCode 文件很多时打开"打印文件"卡死并重启（issue #8，无 PSRAM 的 esp32 机型）/ Fixed hang + reboot when opening the file list with many gcode files — 列表分批构建防看门狗、行数上限防 OOM（超限截断并提示）、请求失败兜底防卡"加载中"（progressive row build, row cap with overflow hint, failure watchdog）
+            - issue #8 修复候选：ESP32 文件列表改为独立 HTTP 流式接收，只保留一页；界面固定复用 8 行，提供上一页/下一页/刷新，离页取消并忽略迟到响应。低内存、超时、异常应答均走已有状态提示。/ Candidate fix: bounded streaming file pages and reusable UI rows, cancellation and failure handling.
+            - wip.2 新日志已确认真实复现（低堆内存后 StoreProhibited），此前“分批 + 100 行上限”不是完整修复。本构建仍需受影响硬件验收，不宣称 issue 已闭环。/ Hardware confirmation is still required; the earlier row cap was not a complete fix.
+            - 复测与限制 / Retest guide: https://umeiko.github.io/KlipperScreen-esp/issue-8-file-list/
             - 加固：状态推送链自检与自愈（针对"进度/温度冻结但控制正常"类故障）/ Status-feed watchdog & self-heal — 去重闸卡死 5s 自清；READY 后 30s 无状态合入先自动重订阅、再 30s 仍无则强拆重连；订阅发送失败 2s 自动重试；串口 `status` 新增 `status_age`/`gate` 诊断字段
           generate_release_notes: true
           # 标签含 wip（如 v0.2.0-wip.1）时标为预发布，不抢占 latest
