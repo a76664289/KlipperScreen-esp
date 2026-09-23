@@ -2,7 +2,8 @@
 
 This is a **pre-release fix candidate**, not a claim that every affected device
 has been verified. [Download v0.5.8-wip.3](https://github.com/umeiko/KlipperScreen-esp/releases/tag/v0.5.8-wip.3).
-The normal `latest` download links still point to the stable v0.5.8 release.
+The normal `latest` download links follow the newest stable release. Use the
+tagged page above when reproducing this exact v0.5.8-wip.3 test candidate.
 
 ## What the new report establishes
 

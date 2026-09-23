@@ -8,7 +8,6 @@ idf_component_register(SRCS "app_settings.c"
                             "klipper_api.c"
                             "bambu_status.c"
                             "bambu_status_stream.c"
-                            "bambu_monitor_stub.c"
                        INCLUDE_DIRS "."
                        REQUIRES lvgl json esp_websocket_client esp_http_client esp_timer bambu
                        PRIV_REQUIRES bsp)

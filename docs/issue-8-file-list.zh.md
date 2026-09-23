@@ -1,7 +1,8 @@
 # Issue #8：文件列表低内存修复（v0.5.8-wip.3）
 
 这是**预发布修复候选**，仍需受影响硬件复测。[下载 wip.3](https://github.com/umeiko/KlipperScreen-esp/releases/tag/v0.5.8-wip.3)。
-官网常规 `latest` 下载链接仍指向正式版 v0.5.8，不会被本次替换。
+官网常规 `latest` 下载链接会跟随最新正式版；如需复现这个特定的
+v0.5.8-wip.3 测试候选，请使用上面的固定标签页面。
 
 ## 新日志证明了什么
 

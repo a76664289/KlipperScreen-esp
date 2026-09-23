@@ -99,7 +99,7 @@ UI 库为 **LVGL 9.3**。界面参考 KlipperScreen 的交互设计，并加入�
 - `bsp_lcd_push()` / `bsp_delay_ms()`：LVGL 场景外直推 RGB565 像素（开机动画用）。
 - 屏幕电源一组：`bsp_set_brightness()` / `bsp_set_screen_timeout()` / `bsp_screen_activity()` / `bsp_screen_off/wake/toggle/is_off()` / `bsp_fade_out()`，语义见 §5。
 - 显示偏好：`bsp_disp_can_invert/set_invert`、`bsp_disp_can_rotate180/set_rotate180`——SPI 屏支持（panel 命令 + 触摸坐标翻转），JC8048W550（RGB 并口）与 desktop 不支持，`can_*` 让 UI 隐藏对应开关。
-- `bsp_restart()`：重建全部 UI 的场景用（语言切换）；`bsp_time_sync_from_host()`：从 Moonraker 主机 HTTP Date 头兜底校时。
+- `bsp_restart()`：重建全部 UI 的场景用（语言切换）；`bsp_time_sync_from_http_date()` 统一消费标准 HTTP Date，`bsp_time_sync_from_host()` 异步从 Moonraker 主机取得该响应头。
 
 BSP 还有两个配套抽象：
 
@@ -259,10 +259,12 @@ UI 触摸/旋钮 ──▶ klipper_api_* 拼 RPC ──▶ esp_websocket_client_
 Core 层三个小接口，平台差异收在 Ports 层：
 
 - **云登录**（`bambu_cloud.h`）：异步接口（区域选择、密码/邮箱验证码/短信验证码登录、设备列表、登出），UI 只面对 snapshot。ESP32 实现在 `src/ports/esp32/bambu/`（bambu_net actor 任务跑全部 HTTPS，NVS 存凭据；内部笔记见该目录 `DEVNOTES.md`），Windows 用 `bambu_cloud_winhttp.c`。
-- **状态监视**（`bambu_monitor.h`）：云端 MQTT 只读监视。Windows 已实现（`bambu_monitor_openssl.c`）；ESP32 目前链接 core 里的 `bambu_monitor_stub.c`（云登录与设备选择已可用，monitor 未接入）。
+- **状态监视**（`bambu_monitor.h`）：云端 MQTT 只读监视。Windows 使用 `bambu_monitor_openssl.c`；ESP32 使用 `bambu_monitor_esp32.c`，由同一个 `bambu_net` actor 串行编排 HTTPS/MQTT，4KiB TLS MFL + ESP-MQTT 分片直喂零分配解析器，避免无 PSRAM 板累计完整大包。
 - **状态模型与解析**：`bambu_status.c`（cJSON 版 merge 规则）与 `bambu_status_stream.c`（零分配流式解析器，ESP-MQTT 分片直喂，语义对齐前者；有宿主机单元测试 `tests/test_bambu_status_stream.c`）。
 
 Bambu 连接方式按槽位保存（`bambu_link_t`）：`CLOUD_MONITOR` 云端只读监视（已实现）；`LAN` 局域网开发者模式是预留路径（UI 已留入口，控制后端未实现）。**与 Moonraker 生命周期互斥**：切到 Bambu 时 `moonraker_stop()`，切回时 `moonraker_start()`，任一时刻只有一套网络连接。
+
+ESP32 标题栏时钟不依赖额外 NTP：Moonraker 模式读取本地主机响应的 `Date`，Bambu 模式复用现有云端 HTTPS 响应的 `Date`，两者都交给 BSP 的同一校时入口。
 
 ---
 

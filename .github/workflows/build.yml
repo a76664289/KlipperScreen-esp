@@ -391,6 +391,9 @@ jobs:
             每个 `ESP-IDFv5.5-<board>.zip` 是一种板型的固件刷机包（ESP-IDF v5.5.5 构建，资产名不带版本号）；`desktop-win-x86_64.zip` 与 `desktop-macos-arm64.zip` 是 Windows / macOS 桌面模拟器。刷机前请先在上方页面确认你板子的产物名称、接线与刷机说明。
 
             **本版更新 / What's new**
+            - 新增：ESP32 正式支持拓竹 Cloud Monitor，只读同步打印状态、任务名、温度、进度、剩余时间与层数；登录、验证码、设备选择和重启恢复沿用现有设置页 / ESP32 Bambu Cloud Monitor with sign-in, device selection, and read-only MQTT status sync
+            - 稳定性：无 PSRAM 板采用 4 KiB TLS MFL 与 368B 零分配流式解析器，HTTPS/MQTT 由单一 actor 串行持有，避免大包与双 TLS 会话耗尽堆 / 4 KiB TLS MFL, bounded streaming parsing, and serialized HTTPS/MQTT ownership on low-memory boards
+            - 修复：拓竹模式开机主任务栈溢出，以及主页时钟无时间来源；时钟现在复用拓竹 HTTPS 的标准 `Date` 头，不额外建立 NTP/TLS 连接 / Fix Bambu-mode boot stack overflow and synchronize the home clock from the existing cloud HTTP response
             - 新增：设置 → 显示设置中的编码器步进 **1 / 2 / 4**（仅带编码器的 ESP32 构建），20 秒试用，确认才保存，取消/返回/超时自动恢复 / Encoder counts per detent with a safe 20-second trial and rollback
             - 新增：独立屏幕色序页面，**默认 / RGB / BGR** 三行单选及本地化红绿蓝色块；支持的 SPI LCD 即时生效并记忆，旋转/镜像保留选择 / Persistent color order for supported SPI LCDs, with localized test swatches
             - 完善：小屏与五语言交互、新增繁体字形；正式桌面程序不包含硬件设置预览项 / Small-screen and five-language UI, additional Traditional Chinese glyphs; desktop preview switches remain off in release builds

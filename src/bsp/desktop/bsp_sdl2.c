@@ -286,3 +286,10 @@ void bsp_time_sync_from_host(const char *host, uint16_t port)
     /* 桌面端直接用本机时间，无需兜底 */
     (void)host; (void)port;
 }
+
+bool bsp_time_sync_from_http_date(const char *http_date)
+{
+    /* 桌面端直接用本机时间；视为已处理，调用方无需平台分支。 */
+    (void)http_date;
+    return true;
+}

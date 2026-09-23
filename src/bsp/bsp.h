@@ -82,8 +82,12 @@ bool bsp_disp_can_color_order(void);
 bsp_color_order_t bsp_disp_get_color_order(void);
 bool bsp_disp_set_color_order(bsp_color_order_t order);
 
-/* 内网时间兜底：从 Moonraker 主机的 HTTP Date 头同步系统时间。
-   SNTP 已同步则跳过；异步执行不阻塞调用方（desktop 空操作）。 */
+/* 用标准 HTTP Date（GMT）同步系统时间；供 Moonraker 与云端传输复用。
+   返回 Date 是否有效并已应用（desktop 为无操作成功）。 */
+bool bsp_time_sync_from_http_date(const char *http_date);
+
+/* 内网时间兜底：异步请求 Moonraker 主机，再把 Date 头交给上面的通用入口。
+   调用方不阻塞（desktop 空操作）。 */
 void bsp_time_sync_from_host(const char *host, uint16_t port);
 
 #ifdef __cplusplus

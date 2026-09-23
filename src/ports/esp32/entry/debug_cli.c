@@ -12,6 +12,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -27,7 +28,7 @@
 #include "printer.h"
 
 #define TAG "cli"
-#define LINE_MAX 128
+#define CLI_LINE_MAX 128
 
 /* ---- 文件系统命令（LittleFS 挂在 /littlefs） ---- */
 static char cwd[64] = "/littlefs";
@@ -406,10 +407,15 @@ static void cli_handle(char *line)
         printf("lcdstat: 仅 JC8048W550（rgb44）支持\n");
 #endif
     } else if (!strcmp(line, "status")) {
-        printf("wifi=%s moonraker=%d rtt=%dms status_age=%ds gate=%d\n",
+        char clock[24] = "unsynced";
+        time_t now = time(NULL);
+        struct tm *tmv = now >= 1767225600 ? localtime(&now) : NULL;
+        if (tmv) strftime(clock, sizeof(clock), "%Y-%m-%d_%H:%M:%S", tmv);
+        printf("wifi=%s moonraker=%d rtt=%dms status_age=%ds gate=%d clock=%s\n",
                wifi_state_str(bsp_wifi_status()),
                (int)moonraker_state(), printer_rtt_ms(),
-               moonraker_status_age_s(), (int)moonraker_status_gate_pending());
+               moonraker_status_age_s(), (int)moonraker_status_gate_pending(),
+               clock);
     } else if (line[0]) {
         printf("unknown: '%s' (try help)\n", line);
     }
@@ -418,7 +424,7 @@ static void cli_handle(char *line)
 static void cli_task(void *arg)
 {
     (void)arg;
-    char line[LINE_MAX];
+    char line[CLI_LINE_MAX];
     int  len = 0;
     printf("\ncli ready, try 'help'\n");
     for (;;) {
@@ -435,7 +441,7 @@ static void cli_task(void *arg)
             fflush(stdout);
         } else if (c == '\b' || c == 0x7f) {
             if (len) len--;
-        } else if (len < LINE_MAX - 1) {
+        } else if (len < CLI_LINE_MAX - 1) {
             line[len++] = (char)c;
             putchar(c);                     /* 回显 */
             fflush(stdout);
