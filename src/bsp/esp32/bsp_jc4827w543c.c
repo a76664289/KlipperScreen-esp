@@ -307,7 +307,8 @@ bool bsp_disp_can_mirror_x(void)  { return true; }
 
 void bsp_disp_set_invert(bool en)
 {
-    nv3041a_cmd(en ? 0x21 : 0x20, NULL, 0);
+    /* NV3041A 为 IPS 面板，INVON 才是正常颜色；设置项语义在此取反。 */
+    nv3041a_cmd(en ? 0x20 : 0x21, NULL, 0);
 }
 
 void bsp_disp_set_rotate180(bool en)
