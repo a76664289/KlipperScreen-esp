@@ -93,11 +93,21 @@ typedef struct {
     double   modified;     /* epoch 秒 */
 } printer_file_t;
 
-/* 异步刷新 gcodes 文件列表。回调在 LVGL 上下文执行；
- * files 为堆数组（回调负责 free），count<=0 表示离线/失败/无文件。
- * 返回 false = 请求未发出（离线或上一个请求未完成）。 */
-typedef void (*printer_files_cb)(printer_file_t *files, int count, void *ud);
-bool printer_files_refresh(printer_files_cb cb, void *ud);
+#define PRINTER_FILES_PAGE_SIZE 8
+typedef struct {
+    printer_file_t files[PRINTER_FILES_PAGE_SIZE];
+    int count;               /* -1 = failed; 0 = empty */
+    unsigned total;          /* valid files, not just visible rows */
+    unsigned skipped;        /* paths too long for the existing print API */
+} printer_file_page_t;
+
+/* Bounded page, borrowed only during cb (LVGL context). No heap ownership transfer.
+ * offset is a valid-file index. Cancel invalidates late replies when leaving.
+ * Poll from the UI tick, independently of printer status notifications. */
+typedef void (*printer_files_cb)(const printer_file_page_t *page, void *ud);
+bool printer_files_refresh(unsigned offset, printer_files_cb cb, void *ud);
+void printer_files_poll(void);
+void printer_files_cancel(void);
 
 void printer_file_delete(const char *name);   /* 删除 gcodes 下的文件 */
 

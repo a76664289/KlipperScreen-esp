@@ -1,6 +1,6 @@
 # KlipperScreen-esp
 
-**KlipperScreen-esp** is a compact, cross-platform display and controller for 3D printers. It runs on inexpensive ESP32 boards and Windows/macOS desktops, provides full **Klipper** control through **Moonraker**, and adds read-only **Bambu Cloud** monitoring on Windows. Its shared LVGL UI supports touch, rotary encoder, mouse, keyboard, or mixed input; the EC11 reference target demonstrates a rotary-only device.
+**KlipperScreen-esp** is a compact, cross-platform display and controller for 3D printers. It runs on inexpensive ESP32 boards and Windows/macOS desktops, provides full **Klipper** control through **Moonraker**, and adds read-only **Bambu Cloud** monitoring on ESP32 and desktop. Its shared LVGL UI supports touch, rotary encoder, mouse, keyboard, or mixed input; the EC11 reference target demonstrates a rotary-only device.
 
 ![On-device photo](screenshots/main_photo.png)
 
@@ -12,8 +12,8 @@ The separately named SDL2 **simulator** uses mock data for layout development, i
 - **G-code files** — thumbnails, metadata, history, print/delete
 - **Control** — axis jog & homing, extrude/retract with cold-extrusion guard, temperature presets (PLA/PETG/ABS/cooldown), emergency stop & firmware restart with confirmation
 - **Robust link** — WebSocket auto-reconnect, app-level heartbeat with RTT display, zombie-connection detection, Klipper error toasts (e.g. endstop not triggered)
-- **Bambu status monitor** — Windows sign-in, verification code, bound-device selection, and cloud MQTT status sync are available. Cloud mode is read-only; LAN Developer Mode controls are reserved for a later backend.
-- **Extras** — "Umeko" boot animation, 5 languages (EN / 简中 / 繁中 / FR / IT, fade-to-black reboot on switch), brightness slider, auto screen-off with touch wake, title-bar clock synced from the Moonraker host (no internet needed)
+- **Bambu status monitor** — ESP32 and desktop support sign-in, verification codes, bound-device selection, and cloud MQTT status sync. Cloud mode is read-only; LAN Developer Mode controls are reserved for a later backend.
+- **Extras** — "Umeko" boot animation, 5 languages (EN / 简中 / 繁中 / FR / IT, fade-to-black reboot on switch), brightness slider, auto screen-off with touch wake, and a title-bar clock synced from the active backend's standard HTTP time
 - **Input paths** — no-touch rotary boards need no touch layer; resistive touch uses a board-specific calibration path; capacitive touch normally reports screen coordinates directly. Touch and rotary can coexist.
 
 ## Supported boards

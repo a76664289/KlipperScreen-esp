@@ -8,6 +8,10 @@ CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
 CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 
+# C3 的 4MB flash 不能扩 app 分区而不移动 LittleFS（会导致升级丢配置）。
+# 相比旧 canonical 的 -Og，-Os 同时缩小固件并保持适合发布的优化级别。
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
 # 控制台走 USB-Serial-JTAG（GPIO18/19）：USB 直连版没有 CH340，
 # 烧录和串口 CLI 都走 Type-C 直连
 CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y

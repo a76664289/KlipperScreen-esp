@@ -234,16 +234,25 @@ static void on_estop(lv_event_t *e)
 static int compact(void) { return ui_scale() < 1.0f; }   /* 小屏：行高放不下两行带边距文本 */
 
 static lv_obj_t *make_info_card(lv_obj_t *parent, int x, int y, int width, int height,
-                                const char *caption, lv_obj_t **value, uint32_t color)
+                                const char *caption, lv_obj_t **value, uint32_t color,
+                                int row_mode)
 {
     lv_obj_t *card = theme_card(parent);
     lv_obj_set_size(card, width, height);
     lv_obj_set_pos(card, x, y);
-    int tight = compact() || height < ui_px(40);   /* 小屏卡高只有 23~31px，必须走紧凑排布 */
+    int tight = compact() || row_mode || height < ui_px(40);   /* 小屏卡高只有 23~31px，必须走紧凑排布 */
     if (tight) lv_obj_set_style_pad_ver(card, ui_px(1), 0);
     lv_obj_t *cap = theme_label(card, caption, THEME_FONT_S, THEME_COL_TEXT_DIM);
-    lv_obj_align(cap, LV_ALIGN_TOP_LEFT, 0, tight ? 0 : -ui_px(1));
     *value = theme_label(card, "--", THEME_FONT_S, color);
+    if (row_mode) {   /* 方屏窄列：标题居左、数值居右单行排布，超长滚动 */
+        lv_obj_align(cap, LV_ALIGN_LEFT_MID, 0, 0);
+        lv_obj_set_width(*value, width * 3 / 5);
+        lv_label_set_long_mode(*value, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_obj_set_style_text_align(*value, LV_TEXT_ALIGN_RIGHT, 0);
+        lv_obj_align(*value, LV_ALIGN_RIGHT_MID, 0, 0);
+        return card;
+    }
+    lv_obj_align(cap, LV_ALIGN_TOP_LEFT, 0, tight ? 0 : -ui_px(1));
     if (tight) {   /* 防折行盖住标题行：限宽，放不下就滚动显示 */
         lv_obj_set_width(*value, width - 2 * THEME_PAD);
         lv_label_set_long_mode(*value, LV_LABEL_LONG_SCROLL_CIRCULAR);
@@ -304,14 +313,25 @@ static lv_obj_t *create(void)
 
     int cell_w = (right_w - gap) / 2;
     int row2_y = y0 + ui_px(46) + gap;
-    make_info_card(scr, right_x, row2_y, cell_w, ui_px(44), "已用", &lbl_elapsed, THEME_COL_TEXT);
-    make_info_card(scr, right_x + cell_w + gap, row2_y, cell_w, ui_px(44),
-                   "剩余", &lbl_remaining, THEME_COL_TEXT);
-    int row3_y = row2_y + ui_px(44) + gap;
-    make_info_card(scr, right_x, row3_y, cell_w, body_h - (row3_y - y0),
-                   "喷嘴", &lbl_ext, THEME_COL_EXTRUDER);
-    make_info_card(scr, right_x + cell_w + gap, row3_y, cell_w, body_h - (row3_y - y0),
-                   "热床", &lbl_bed, THEME_COL_BED);
+    if (cell_w < ui_px(70)) {
+        /* 方屏（480x480）：右列两格分栏后单格过窄放不下时间/温度文本，
+           改为整列单行卡竖排（标题左、数值右） */
+        int rows_h = body_h - ui_px(46) - gap;
+        int rh = (rows_h - 3 * gap) / 4;
+        make_info_card(scr, right_x, row2_y, right_w, rh, "已用", &lbl_elapsed, THEME_COL_TEXT, 1);
+        make_info_card(scr, right_x, row2_y + (rh + gap), right_w, rh, "剩余", &lbl_remaining, THEME_COL_TEXT, 1);
+        make_info_card(scr, right_x, row2_y + 2 * (rh + gap), right_w, rh, "喷嘴", &lbl_ext, THEME_COL_EXTRUDER, 1);
+        make_info_card(scr, right_x, row2_y + 3 * (rh + gap), right_w, rh, "热床", &lbl_bed, THEME_COL_BED, 1);
+    } else {
+        make_info_card(scr, right_x, row2_y, cell_w, ui_px(44), "已用", &lbl_elapsed, THEME_COL_TEXT, 0);
+        make_info_card(scr, right_x + cell_w + gap, row2_y, cell_w, ui_px(44),
+                       "剩余", &lbl_remaining, THEME_COL_TEXT, 0);
+        int row3_y = row2_y + ui_px(44) + gap;
+        make_info_card(scr, right_x, row3_y, cell_w, body_h - (row3_y - y0),
+                       "喷嘴", &lbl_ext, THEME_COL_EXTRUDER, 0);
+        make_info_card(scr, right_x + cell_w + gap, row3_y, cell_w, body_h - (row3_y - y0),
+                       "热床", &lbl_bed, THEME_COL_BED, 0);
+    }
 
     btn_pause = theme_button(scr, NULL, NULL, 1);
     lv_obj_add_event_cb(btn_pause, on_pause, LV_EVENT_CLICKED, NULL);

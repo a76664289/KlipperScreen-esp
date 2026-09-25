@@ -167,7 +167,7 @@ static void open_text_dialog(const char *title, char *target, size_t cap,
     if (numeric) lv_textarea_set_accepted_chars(ta, "0123456789");
     lv_textarea_set_text(ta, target);
     lv_obj_set_style_text_font(ta, THEME_FONT_S, 0);
-    lv_obj_set_width(ta, ui_px(300));
+    lv_obj_set_width(ta, LV_MIN(ui_px(300), ui_content_w()));   /* 方屏（480x480）下 2x 换算的 600px 会超出屏宽 */
     lv_obj_align(ta, LV_ALIGN_TOP_MID, 0, ui_px(32));
     lv_obj_add_event_cb(ta, on_text_ready, LV_EVENT_READY, NULL);
     lv_obj_add_event_cb(ta, on_text_cancel, LV_EVENT_CANCEL, NULL);
@@ -504,7 +504,7 @@ static lv_obj_t *create(void)
     lbl_status = theme_label(scr, "", THEME_FONT_M, THEME_COL_TEXT);
     lv_obj_align(lbl_status, LV_ALIGN_TOP_LEFT, ui_px(62), THEME_TITLEBAR_H + ui_px(6));
     lbl_detail = theme_label(scr, "", THEME_FONT_S, THEME_COL_TEXT_DIM);
-    lv_obj_set_width(lbl_detail, ui_px(245));
+    lv_obj_set_width(lbl_detail, LV_MIN(ui_px(245), ui_scr_w() - ui_px(70)));   /* 方屏 2x 换算 490px 超屏宽 */
     lv_label_set_long_mode(lbl_detail, LV_LABEL_LONG_DOT);
     lv_obj_align(lbl_detail, LV_ALIGN_TOP_LEFT, ui_px(62), THEME_TITLEBAR_H + ui_px(28));
 

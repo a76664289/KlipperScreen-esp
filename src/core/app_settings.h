@@ -98,6 +98,13 @@ int  settings_load_display_rotate(void);
 bool settings_save_display_rotate(int en);
 int  settings_load_display_mirror(void);
 bool settings_save_display_mirror(int en);
+/* display_color_order: 0=板型默认，1=RGB，2=BGR；非法值回到默认。 */
+int  settings_load_display_color_order(void);
+bool settings_save_display_color_order(int order);
+/* encoder_counts=0（缺省，板型默认）或 1..8（每格正交计数）。
+ * 试用不写文件，仅明确确认后保存；非法/损坏值回退 0。 */
+int  settings_load_encoder_counts(void);
+bool settings_save_encoder_counts(int counts);
 void settings_load_theme(char *out, size_t len);
 bool settings_save_theme(const char *theme);
 

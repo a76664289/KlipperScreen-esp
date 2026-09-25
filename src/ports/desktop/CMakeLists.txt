@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project(klipper_remote_desktop C)
 
+# 默认关闭：仅手动验收构建开启，不影响产品桌面端或 CI 发布产物。
+option(KR_ENCODER_SETTINGS_PREVIEW "Preview ESP32 encoder settings in simulator" OFF)
+option(KR_DISPLAY_SETTINGS_PREVIEW "Preview RGB/BGR display settings in simulator" OFF)
+
 # SDL2 desktop ports share every UI source. On Windows the primary target is
 # a real Moonraker controller; a separately named simulator keeps mock data an
 # explicit development tool.
@@ -29,6 +33,8 @@ file(GLOB UI_SRCS
 set(DESKTOP_COMMON_SRCS
     main.c
     ${SRC_ROOT}/bsp/bsp_screen_power.c
+    ${SRC_ROOT}/bsp/bsp_display_color.c
+    ${SRC_ROOT}/core/file_list_stream.c
     ${SRC_ROOT}/bsp/desktop/bsp_sdl2.c
     ${SRC_ROOT}/bsp/desktop/bsp_wifi_windows.c
     ${SRC_ROOT}/bsp/desktop/bsp_wifi_linux.c
@@ -154,4 +160,11 @@ else()
     target_compile_definitions(klipper_remote_simulator PRIVATE KLIPPER_DESKTOP_SIMULATOR=1)
     target_include_directories(klipper_remote_simulator PRIVATE ${CJSON_HEADER_DIR})
     target_link_libraries(klipper_remote_simulator PRIVATE ${CJSON_LINK})
+endif()
+
+if(KR_ENCODER_SETTINGS_PREVIEW)
+    target_compile_definitions(klipper_remote_simulator PRIVATE KR_ENCODER_SETTINGS_PREVIEW=1)
+endif()
+if(KR_DISPLAY_SETTINGS_PREVIEW)
+    target_compile_definitions(klipper_remote_simulator PRIVATE KR_DISPLAY_SETTINGS_PREVIEW=1)
 endif()

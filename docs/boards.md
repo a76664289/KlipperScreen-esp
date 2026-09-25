@@ -14,6 +14,7 @@
 | [esp32s3-ILI9488-480_320-xpt2046-ec11](#esp32s3-ili9488-480_320-xpt2046-ec11) | `esp32s3-ILI9488-480_320-xpt2046-ec11` | 3.5" 480×320 ILI9488 SPI | XPT2046 resistive (shared bus) + EC11 | ESP32-S3 N16R8 / 16MB | 🆕 New, MKS PI-TS35 |
 | [esp32s3-ILI9341-320_240-xpt2046-ec11](#esp32s3-ili9341-320_240-xpt2046-ec11) | `esp32s3-ILI9341-320_240-xpt2046-ec11` | 320×240 ILI9341 SPI | XPT2046 resistive (shared bus) + EC11 | ESP32-S3 N16R8 / 16MB | 🆕 New |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB parallel | GT911 capacitive | ESP32-S3 / 16MB | ✅ Stable |
+| [SenseCAP Indicator](#sensecap-indicator) | `esp32s3-sensecap-indicator` | 4" 480×480 ST7701S RGB parallel | FT5x06 capacitive | ESP32-S3 N8R8 / 8MB | 🆕 New |
 | [JLC SZP ESP32-S3](#jlc-szp-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 capacitive | ESP32-S3 N16R8 / 16MB | ✅ Verified |
 | [esp32s3-retro-go](#esp32s3-retro-go) | `esp32s3-retro-go` | 3.2" 240×320 ST7789 SPI | None, GPIO buttons | ESP32-S3 / 16MB | 🆕 New |
 | [esp32c3-st7789-320_240-ec11](#esp32c3-st7789-320_240-ec11) | `esp32c3-st7789-320_240-ec11` | 240×320 ST7789 SPI | None, rotary only | ESP32-C3 / 4MB | 🆕 New, LuatOS CORE & Super Mini |
@@ -34,6 +35,7 @@ Flash packages are named `ESP-IDFv5.5-<board>.zip` (asset names carry no version
 | esp32s3-ILI9488-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip) |
 | esp32s3-ILI9341-320_240-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11.zip) |
 | JC8048W550 | [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip) |
+| SenseCAP Indicator | [ESP-IDFv5.5-esp32s3-sensecap-indicator.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-sensecap-indicator.zip) |
 | JLC SZP ESP32-S3 | [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip) |
 | esp32s3-retro-go | [ESP-IDFv5.5-esp32s3-retro-go.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-retro-go.zip) |
 | esp32c3-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32c3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32c3-st7789-320_240-ec11.zip) |
@@ -379,6 +381,35 @@ Logical resolution **800×480**. The full RGB-parallel tearing/underflow investi
 | LCD backlight | 2 |
 | Touch SDA / SCL / RST | 19 / 20 / 38 |
 | BOOT button (screen off / wake) | 0 |
+
+## SenseCAP Indicator
+
+*Seeed SenseCAP Indicator (the D1/D1S/D1L/D1Pro variants share the same display hardware): a 4" 480×480 square capacitive display with an ESP32-S3 + RP2040 dual-MCU design. Hardware docs: [Seeed Wiki](https://wiki.seeedstudio.com/SenseCAP_Indicator_ESP32_4_inch_Touch_Screen/).*
+
+![SenseCAP Indicator running KlipperScreen-esp](screenshots/boards/sensecap_indicator.gif)
+
+Logical resolution **480×480**.
+
+- MCU: ESP32-S3-WROOM-1-N8R8, 8MB QIO flash + 8MB Octal PSRAM @ 80MHz
+- Display: ST7701S RGB parallel (RGB565), PCLK 12MHz (~42fps); same custom **rgb44** driver as JC8048W550 (IDF-4.4-style transfer model + vsync page flip, LVGL DIRECT double framebuffer, 2×450KB in PSRAM). Panel init runs over bit-banged 3-wire 9-bit SPI — SCK/MOSI are real GPIOs while CS/RST sit on the TCA9535 expander — with the init sequence copied from the official Seeed SDK
+- IO expander: TCA9535 on I2C0 (probed at 0x20, falls back to 0x39 for later batches); it also holds the RP2040 reset line (driven high to release it — the RP2040 runs its own factory firmware, unrelated to this project)
+- Touch: FT5x06 capacitive, shares I2C0 with the expander, TP_RST also on the expander (pulsed before driver init), no calibration needed
+- Backlight: GPIO45, LEDC PWM, active high (a strapping pin — the official SDK uses it the same way)
+- Screen off / wake: side button (GPIO38, active low)
+- Flash via the **"USB-SERIAL" (CH340) Type-C port** — the ESP32-S3 side, console on UART0 @ 115200. The other port is the RP2040's native USB: do **not** use it
+
+| Function | GPIO | Notes |
+|---|---|---|
+| LCD HSYNC / VSYNC / DE / PCLK | 16 / 17 / 18 / 21 | RGB parallel |
+| LCD B0..B4 | 15, 14, 13, 12, 11 | |
+| LCD G0..G5 | 10, 9, 8, 7, 6, 5 | |
+| LCD R0..R4 | 4, 3, 2, 1, 0 | |
+| LCD backlight | 45 | LEDC PWM, active high |
+| Init SPI SCK / MOSI | 41 / 48 | Bit-banged 3-wire 9-bit |
+| LCD CS / LCD RST | TCA9535 P4 / P5 | IO expander, I2C 0x20 (0x39 on some batches) |
+| TP RST / RP2040 RST | TCA9535 P7 / P8 | |
+| Touch + expander SDA / SCL | 39 / 40 | I2C0 @ 100kHz |
+| Side button (screen off / wake) | 38 | Active low, internal pull-up |
 
 ## JLC SZP ESP32-S3
 

@@ -23,6 +23,7 @@ LV_FONT_DECLARE(font_cjk_28);
 LV_FONT_DECLARE(font_cjk_32);
 LV_FONT_DECLARE(font_cjk_28_min);
 LV_FONT_DECLARE(font_cjk_32_min);
+LV_FONT_DECLARE(font_latin_24);   /* 纯西文 Lato 24（ui_font_latin24，2x 屏拉丁语缩档用） */
 
 static int   scr_w = 320;
 static int   scr_h = 240;
@@ -91,6 +92,10 @@ static int small(void) { return scale_f < 1.0f; }
 #elif defined(CONFIG_BOARD_ESP32_3248S035C)
 #define UI_FONT_BIG 0   /* 480x320 同 E32R35T：只链 14/16 压缩档全表 */
 
+#elif defined(CONFIG_BOARD_ESP32S3_ILI9488_EC11)
+#define UI_FONT_BIG 0   /* 480x320 同 E32R35T：只链 14/16 压缩档全表 */
+#elif defined(CONFIG_BOARD_ESP32S3_ILI9341_EC11)
+#define UI_FONT_BIG 0   /* 320x240 同 CYD：只链 14/16 压缩档全表 */
 #elif defined(CONFIG_BOARD_ESP32S3_RETRO_GO)
 #define UI_FONT_BIG 0   /* 320x240 同 CYD：只链 14/16 压缩档全表 */
 #elif defined(CONFIG_BOARD_ESP32C3_ST7789_EC11)
@@ -100,6 +105,9 @@ static int small(void) { return scale_f < 1.0f; }
 #elif defined(CONFIG_BOARD_JC4827W543C)
 #define UI_FONT_BIG 0   /* 480x320 同 E32R35T：只链 14/16 压缩档全表 */
 #define UI_FONT_MIN 1   /* 最小子集（排障：缩小 flash 字形表的 XIP 流量），置 0 回全表 */
+#elif defined(CONFIG_BOARD_SENSECAP_INDICATOR)
+#define UI_FONT_BIG 1   /* 480x480，scale 2.0 → 28/32 档 */
+#define UI_FONT_MIN 0   /* 全表 GB2312：PCLK 12MHz 带宽余量比 JC8048 大，实测无抽动 */
 #endif
 
 /* JC8048：最小子集优先，未定义 UI_FONT_MIN 时默认全表 */
@@ -166,6 +174,19 @@ const lv_font_t *ui_font_icon(void)
 #else
     return small() ? &lv_font_montserrat_12
          : big()   ? &lv_font_montserrat_32 : &lv_font_montserrat_16;
+#endif
+}
+
+/* 纯西文紧凑档：2x 大屏拉丁语长词缩一档（Lato 24 含重音字形）；
+   非 2x 档/非大屏板型回退正文小字档，且不引用 font_latin_24（链接器裁掉，省 flash） */
+const lv_font_t *ui_font_latin24(void)
+{
+#if defined(UI_FONT_SMALL)
+    return &font_cjk_12_cmp;
+#elif defined(UI_FONT_BIG)
+    return UI_FONT_BIG ? &font_latin_24 : &font_cjk_14_cmp;
+#else
+    return big() ? &font_latin_24 : (small() ? &font_cjk_12 : &font_cjk_14);
 #endif
 }
 

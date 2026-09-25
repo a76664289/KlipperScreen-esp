@@ -208,6 +208,18 @@ def main() -> int:
     if not args.sizes:
         for size in (28, 32):
             gen_font(args.font, args.font_latin, size, lit, compress=False, suffix="_min")
+        # 纯西文 24px（Lato，仅 ASCII+Latin-1）：2x 档（480 宽）拉丁语系长词
+        # 放不进按钮时缩一档用（panel_main fit_latin_label），比再链一整张
+        # CJK 16 档省 flash；montserrat 无重音字形（é → 方框）不可用。
+        subprocess.run([
+            "node", str(CONV_JS),
+            "--font", args.font_latin,
+            "--size", "24", "--bpp", "4", "--format", "lvgl",
+            "--lv-include", "lvgl.h",
+            "--range", "0x20-0x7F,0xA0-0xFF",
+            "--no-compress",
+            "-o", str(ROOT / "src" / "ui" / "assets" / "font_latin_24.c"),
+        ], cwd=ROOT, check=True)
     print("[done] 字体生成完成，重新编译固件/桌面端即可生效")
     return 0
 

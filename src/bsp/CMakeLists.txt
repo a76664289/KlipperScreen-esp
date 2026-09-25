@@ -4,6 +4,8 @@
 # 因此不能用 if(CONFIG_...) 决定 SRCS/REQUIRES —— 两个板型的源都编译，
 # 文件内部用 #if CONFIG_BOARD_* 裁剪；依赖也全部列上（对端目标都能编译）。
 idf_component_register(SRCS "bsp_screen_power.c"
+                            "bsp_display_color.c"
+                            "esp32/bsp_lcd_color_io.c"
                             "esp32/bsp_cyd_2432s028r.c"
                             "esp32/bsp_e32r35t.c"
                             "esp32/bsp_ec11_knob_minimal.c"
@@ -20,12 +22,14 @@ idf_component_register(SRCS "bsp_screen_power.c"
                             "esp32/bsp_jc8048w550.c"
                             "esp32/bsp_jc4827w543c.c"
                             "esp32/bsp_esp32_3248s035c.c"
+                            "esp32/bsp_sensecap_indicator.c"
                             "esp32/bsp_wifi_esp32.c"
                             "esp32/bsp_gpio_buttons.c"
                             "esp32/bsp_input_esp32.c"
                             "esp32/bsp_rotary_encoder.c"
                             "esp32/bsp_sleep_button.c"
                             "esp32/bsp_conf_littlefs.c"
+                            "esp32/bsp_board_name.c"
                             "esp32/rgb44.c"
                        INCLUDE_DIRS "." "esp32"
                        REQUIRES lvgl esp_lcd

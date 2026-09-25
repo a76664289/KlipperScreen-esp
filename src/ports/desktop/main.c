@@ -7,6 +7,7 @@
  *   klipper_remote_simulator[.exe] <毫秒> <out.bmp> 运行指定毫秒后截图保存并退出
  */
 #include "bsp.h"
+#include "bsp_caps.h"
 #include "bsp_screen_power.h"
 #include "ui_app.h"
 #include "printer.h"
@@ -115,6 +116,13 @@ static int save_bmp(const char *path)
             row[x * 3 + 0] = B;
             row[x * 3 + 1] = G;
             row[x * 3 + 2] = R;
+#if defined(KLIPPER_DESKTOP_SIMULATOR) && defined(KR_DISPLAY_SETTINGS_PREVIEW)
+            /* LVGL 快照在显示输出转换之前取得，预览截图需匹配 SDL 实际色序。 */
+            if (bsp_disp_get_color_order() == BSP_COLOR_ORDER_BGR) {
+                row[x * 3 + 0] = R;
+                row[x * 3 + 2] = B;
+            }
+#endif
         }
         fwrite(row, 1, row_bytes, f);
     }
@@ -130,6 +138,11 @@ int main(int argc, char **argv)
 {
     bsp_init();
     bsp_input_init();       /* 鼠标滚轮 + 中键模拟旋转编码器 */
+    if (bsp_disp_can_color_order())
+        bsp_disp_set_color_order(settings_load_display_color_order());
+#if BSP_HAS_ENCODER_SETTINGS
+    bsp_encoder_set_counts_per_detent(settings_load_encoder_counts());
+#endif
     boot_anim_play(bsp_lcd_push, bsp_delay_ms);   /* 「Umeko」开机动画（~2.5s） */
     ui_app_create();
     bsp_set_brightness(settings_load_brightness());

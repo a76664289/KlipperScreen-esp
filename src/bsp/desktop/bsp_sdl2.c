@@ -4,6 +4,7 @@
  * 环境变量 KLIPPER_RES=WxH 可模拟其它板型分辨率（如 KLIPPER_RES=800x480 模拟 JC8048W550）。
  */
 #include "bsp.h"
+#include "bsp_caps.h"
 #include "bsp_screen_power.h"
 #include "ui_buttons.h"
 #include "ui_nav.h"
@@ -15,6 +16,69 @@
 
 static int scr_w = 320, scr_h = 240;
 static SDL_mutex *lvgl_mutex;
+
+#if defined(KLIPPER_DESKTOP_SIMULATOR) && defined(KR_DISPLAY_SETTINGS_PREVIEW)
+static bool preview_bgr;
+
+static bool preview_color_order_apply(bool bgr)
+{
+    preview_bgr = bgr;
+    return true;
+}
+
+/* SDL DIRECT/RGB565 同步复制到纹理：flush 前模拟 R/B 互换，flush 后还原。
+ * 不改主题常量，不污染 LVGL 双缓冲的逻辑像素；此路径只用于桌面预览。
+ * 实体面板必须接自己的色序控制，不能把该逐像素路径带到 ESP32。 */
+static void preview_color_flush(lv_event_t *e)
+{
+    if (!preview_bgr) return;
+    lv_display_t *disp = lv_event_get_current_target(e);
+    lv_draw_buf_t *buf = lv_display_get_buf_active(disp);
+    for (uint32_t y = 0; y < buf->header.h; y++) {
+        uint16_t *pixels = (uint16_t *)(buf->data + y * buf->header.stride);
+        for (uint32_t x = 0; x < buf->header.w; x++) {
+            uint16_t p = pixels[x];
+            pixels[x] = (uint16_t)((p & 0x07E0) | ((p & 0xF800) >> 11) | ((p & 0x001F) << 11));
+        }
+    }
+}
+#endif
+
+#if BSP_HAS_ENCODER_SETTINGS
+static int encoder_counts = 4, encoder_remainder;
+static int encoder_hw_counts = 2;  /* 预览默认复现“两格走一下” */
+#endif
+
+int bsp_encoder_default_counts_per_detent(void)
+{
+#if BSP_HAS_ENCODER_SETTINGS
+    return 4;
+#else
+    return 0;
+#endif
+}
+
+int bsp_encoder_get_counts_per_detent(void)
+{
+#if BSP_HAS_ENCODER_SETTINGS
+    return encoder_counts;
+#else
+    return 0;
+#endif
+}
+
+bool bsp_encoder_set_counts_per_detent(int counts)
+{
+#if BSP_HAS_ENCODER_SETTINGS
+    if (counts < 0 || counts > 8) return false;
+    encoder_counts = counts ? counts : bsp_encoder_default_counts_per_detent();
+    encoder_remainder = 0;
+    return true;
+#else
+    LV_UNUSED(counts);
+    return false;
+#endif
+}
 
 static uint64_t screen_now_ms(void)
 {
@@ -40,7 +104,17 @@ static int SDLCALL screen_input_filter(void *userdata, SDL_Event *event)
 
     /* Dropping the first event mirrors the hardware adapters: waking the
        screen must not also click a control or move encoder focus. */
-    return activity && bsp_screen_activity() ? 0 : 1;
+    if (activity && bsp_screen_activity()) return 0;
+#if BSP_HAS_ENCODER_SETTINGS
+    if (event->type == SDL_MOUSEWHEEL) {
+        /* 在 SDL 正常 encoder 驱动之前换算；中键/键盘/触摸不受影响。
+         * setter 与事件泵均运行在主 LVGL 线程，不另建输入后台线程。 */
+        encoder_remainder += event->wheel.y * encoder_hw_counts;
+        event->wheel.y = encoder_remainder / encoder_counts;
+        encoder_remainder -= event->wheel.y * encoder_counts;
+    }
+#endif
+    return 1;
 }
 
 void bsp_init(void)
@@ -56,10 +130,25 @@ void bsp_init(void)
     lv_init();
 
     lv_display_t *disp = lv_sdl_window_create(scr_w, scr_h);
+#if defined(KLIPPER_DESKTOP_SIMULATOR) && defined(KR_DISPLAY_SETTINGS_PREVIEW)
+    /* 仅在已验证的 SDL 模式开放能力，避免误用于异步/局部缓冲驱动。 */
+    if (lv_display_get_color_format(disp) == LV_COLOR_FORMAT_RGB565 &&
+        LV_SDL_RENDER_MODE == LV_DISPLAY_RENDER_MODE_DIRECT && LV_USE_DRAW_SDL == 0) {
+        bsp_disp_color_order_register(false, preview_color_order_apply); /* SDL 原生 RGB */
+        lv_display_add_event_cb(disp, preview_color_flush, LV_EVENT_FLUSH_START, NULL);
+        lv_display_add_event_cb(disp, preview_color_flush, LV_EVENT_FLUSH_FINISH, NULL);
+    }
+#endif
     /* 小屏放大看：160x128 → 3x，320x240 → 2x，800x480 → 1x */
     lv_sdl_window_set_zoom(disp, scr_w <= 200 ? 3 : (scr_w <= 320 ? 2 : 1));
 #ifdef KLIPPER_DESKTOP_SIMULATOR
+#if defined(KR_DISPLAY_SETTINGS_PREVIEW)
+    lv_sdl_window_set_title(disp, "Display Settings Preview - RGB/BGR + Encoder");
+#elif BSP_HAS_ENCODER_SETTINGS
+    lv_sdl_window_set_title(disp, "Encoder Settings Preview - wheel / middle click");
+#else
     lv_sdl_window_set_title(disp, "Klipper Remote Simulator");
+#endif
 #else
     lv_sdl_window_set_title(disp, "Klipper Remote");
 #endif
@@ -112,6 +201,11 @@ static int SDLCALL buttons_sdl_watch(void *userdata, SDL_Event *event)
 
 void bsp_input_init(void)
 {
+#if BSP_HAS_ENCODER_SETTINGS
+    const char *counts = getenv("KLIPPER_ENCODER_HW_COUNTS");
+    if (counts && strlen(counts) == 1 && counts[0] >= '1' && counts[0] <= '8')
+        encoder_hw_counts = counts[0] - '0';
+#endif
     /* 滚轮正/反转 = encoder diff；中键按下 = encoder push。 */
     lv_sdl_mousewheel_create();
     SDL_AddEventWatch(buttons_sdl_watch, NULL);
@@ -172,6 +266,8 @@ void bsp_restart(void)
     exit(0);
 }
 
+const char *bsp_board_name(void) { return "desktop"; }
+
 /* 桌面端调试前端：反色/旋转/镜像不提供（UI 会按 can_* 隐藏开关） */
 bool bsp_disp_can_invert(void)    { return false; }
 bool bsp_disp_can_rotate180(void) { return false; }
@@ -191,4 +287,11 @@ void bsp_time_sync_from_host(const char *host, uint16_t port)
 {
     /* 桌面端直接用本机时间，无需兜底 */
     (void)host; (void)port;
+}
+
+bool bsp_time_sync_from_http_date(const char *http_date)
+{
+    /* 桌面端直接用本机时间；视为已处理，调用方无需平台分支。 */
+    (void)http_date;
+    return true;
 }
