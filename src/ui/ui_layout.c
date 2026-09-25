@@ -62,9 +62,6 @@ int ui_content_w(void)
     return scr_w - 2 * ui_px(8);
 }
 
-static int big(void)   { return scale_f >= 2.0f; }
-static int small(void) { return scale_f < 1.0f; }
-
 /* 字号档选择：ESP32 按板型在预处理期定死，未用的全表字体直接被链接器丢掉
    （CYD/SZP 只链 14/16，JC8048 只链 28/32，esp32-st7735s-128_160-ec11 只链 10/12 ——
    4MB/16MB flash 都放得下 GB2312 全表）；desktop 走运行时 big()/small()
@@ -108,6 +105,11 @@ static int small(void) { return scale_f < 1.0f; }
 #elif defined(CONFIG_BOARD_SENSECAP_INDICATOR)
 #define UI_FONT_BIG 1   /* 480x480，scale 2.0 → 28/32 档 */
 #define UI_FONT_MIN 0   /* 全表 GB2312：PCLK 12MHz 带宽余量比 JC8048 大，实测无抽动 */
+#endif
+
+#if !defined(UI_FONT_SMALL) && !defined(UI_FONT_BIG)
+static int big(void)   { return scale_f >= 2.0f; }
+static int small(void) { return scale_f < 1.0f; }
 #endif
 
 /* JC8048：最小子集优先，未定义 UI_FONT_MIN 时默认全表 */
@@ -191,6 +193,7 @@ const lv_font_t *ui_font_latin24(void)
 }
 
 /* 小屏(160x128) 0.45x 图标映射：base → _sm 变体（tools/icongen 生成） */
+#if defined(UI_FONT_SMALL) || !defined(UI_FONT_BIG)
 static const struct { const lv_image_dsc_t *base, *sm; } icon_sm_map[] = {
     { &img_heater,          &img_heater_sm },
     { &img_nozzle_16,       &img_nozzle_16_sm },
@@ -221,6 +224,7 @@ static const lv_image_dsc_t *icon_sm(const lv_image_dsc_t *base)
         if (icon_sm_map[i].base == base) return icon_sm_map[i].sm;
     return base;
 }
+#endif
 
 const lv_image_dsc_t *ui_icon(const lv_image_dsc_t *i16, const lv_image_dsc_t *i32)
 {

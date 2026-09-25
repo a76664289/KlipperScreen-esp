@@ -15,6 +15,10 @@ const char *bsp_board_name(void)
     return "e32r35t";
 #elif defined(CONFIG_BOARD_JC8048W550)
     return "jc8048w550";
+#elif defined(CONFIG_BOARD_JC4827W543C)
+    return "JC4827W543C";
+#elif defined(CONFIG_BOARD_ESP32_3248S035C)
+    return "ESP32-3248S035C";
 #elif defined(CONFIG_BOARD_SENSECAP_INDICATOR)
     return "esp32s3-sensecap-indicator";
 #elif defined(CONFIG_BOARD_ESP32S3_JLC_SZP)

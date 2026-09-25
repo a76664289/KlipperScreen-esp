@@ -201,11 +201,13 @@ static void on_mirror_toggle(lv_event_t *e)
     lv_refr_now(NULL);
 }
 
+#if BSP_HAS_ENCODER_SETTINGS
 static void open_color_order(lv_event_t *e)
 {
     LV_UNUSED(e);
     panel_mgr_open("display_color");
 }
+#endif
 
 /* 息屏选项（秒）；0 = 永不 */
 static const uint32_t so_values[] = { 15, 30, 60, 300, 900, 1800, 3600, 0 };

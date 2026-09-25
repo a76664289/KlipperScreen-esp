@@ -115,7 +115,7 @@ static lv_obj_t *create(void)
     lv_obj_set_flex_flow(btn_del, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(btn_del, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(btn_del, ui_px(4), 0);
-    lv_obj_t *ic = theme_label(btn_del, LV_SYMBOL_TRASH, THEME_FONT_ICON, THEME_COL_ERROR);
+    theme_label(btn_del, LV_SYMBOL_TRASH, THEME_FONT_ICON, THEME_COL_ERROR);
     lbl_del_text = theme_label(btn_del, "删除", THEME_FONT_S, THEME_COL_ERROR);
 
     /* 纯列表页：左 = 返回、右 = 进入/确定（ui_nav 白名单） */
