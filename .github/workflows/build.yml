@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 15 个板型按芯片合并为 3 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
+  # 16 个板型按芯片合并为 3 个 shard Job：同一 shard 在同一 IDF 容器内顺序构建，
   # 共享按 shard 分开的 ccache。单板构建失败不中断其余板型：收集失败列表，
   # 上传可用的部分产物与失败日志后，在末尾令 shard 失败。
   firmware:
