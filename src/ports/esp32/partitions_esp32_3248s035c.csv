@@ -1,0 +1,8 @@
+# ESP32-3248S035C 4MB Flash 分区表
+# factory 3.25MB（比 3MB 多 256KB，解决 app 5.7KB 溢出）
+# storage 704KB（littlefs 配置文件够用）
+# Name,    Type, SubType,  Offset,   Size,      Flags
+nvs,       data, nvs,      0x9000,   0x6000,
+phy_init,  data, phy,      0xf000,   0x1000,
+factory,   app,  factory,  0x10000,  0x340000,
+storage,   data, littlefs, 0x350000, 0xB0000,

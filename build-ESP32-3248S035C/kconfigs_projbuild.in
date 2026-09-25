@@ -1,0 +1,7 @@
+source "F:/Espressif/frameworks/esp-idf-v5.4.4/components/bootloader/Kconfig.projbuild"
+source "F:/Espressif/frameworks/esp-idf-v5.4.4/components/esp_app_format/Kconfig.projbuild"
+source "F:/Espressif/frameworks/esp-idf-v5.4.4/components/esp_rom/Kconfig.projbuild"
+source "F:/Espressif/frameworks/esp-idf-v5.4.4/components/esptool_py/Kconfig.projbuild"
+source "F:/Espressif/frameworks/esp-idf-v5.4.4/components/partition_table/Kconfig.projbuild"
+source "F:/2016-03-19/KlipperScreen-esp/src/bsp/Kconfig.projbuild"
+source "F:/2016-03-19/KlipperScreen-esp/src/ports/esp32/managed_components/atanisoft__esp_lcd_touch_xpt2046/Kconfig.projbuild"

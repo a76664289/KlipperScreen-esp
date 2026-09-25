@@ -19,6 +19,14 @@ menu "Board selection"
         config BOARD_JC8048W550
             bool "JC8048W550 (ESP32-S3, 800x480 ST7262 RGB + GT911)"
 
+        config BOARD_JC4827W543C
+            bool "JC4827W543C (ESP32-S3, 480x272 QSPI NV3041A + GT911)"
+            help
+                Guition JC4827W543C: ESP32-S3 + 4.3" 480x272 IPS QSPI NV3041A
+                + GT911 capacitive touch.
+                QSPI: CS=45, SCK=47, D0=21, D1=48, D2=40, D3=39, BL=1.
+                GT911: SCL=4, SDA=8, RST=38, INT=3.
+
         config BOARD_ESP32S3_JLC_SZP
             bool "立创实战派 ESP32-S3 (ESP32-S3 N16R8, 2.0\" 320x240 ST7789 + FT6336)"
 
@@ -28,6 +36,15 @@ menu "Board selection"
         config BOARD_EC11_KNOB_ESP32
             bool "esp32-st7735s-128_160-ec11 (ESP32 + 1.8\" 128x160 ST7735S + EC11, 引脚对齐 CYD)"
 
+        config BOARD_ESP32_3248S035C
+            bool "ESP32-3248S035C (ESP32, 480x320 ST7796 SPI + GT911, 4MB flash)"
+            help
+                ESP32-3248S035C: ESP32 + 3.5" 480x320 IPS ST7796 over SPI
+                + GT911 capacitive touch over I2C.
+                Display SPI: MISO=12, MOSI=13, SCLK=14, CS=15, DC=2, BL=27.
+                Touch I2C: SDA=33, SCL=32, RST=25 (INT not used).
+                No PSRAM. 4MB flash.
+        
         config BOARD_EC11_KNOB_ESP32_ST7789
             bool "esp32-st7789-320_240-ec11 (ESP32 + 240x320 ST7789 + EC11, 引脚对齐 CYD)"
 

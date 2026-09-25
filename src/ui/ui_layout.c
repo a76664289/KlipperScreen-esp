@@ -88,12 +88,17 @@ static int small(void) { return scale_f < 1.0f; }
 #define UI_FONT_BIG 0   /* 320x240 同 CYD：只链 14/16 压缩档全表 */
 #elif defined(CONFIG_BOARD_ESP32S3_ST7796_EC11)
 #define UI_FONT_BIG 0   /* 480x320 同 E32R35T：只链 14/16 压缩档全表 */
+#elif defined(CONFIG_BOARD_ESP32_3248S035C)
+#define UI_FONT_BIG 0   /* 480x320 同 E32R35T：只链 14/16 压缩档全表 */
+
 #elif defined(CONFIG_BOARD_ESP32S3_RETRO_GO)
 #define UI_FONT_BIG 0   /* 320x240 同 CYD：只链 14/16 压缩档全表 */
 #elif defined(CONFIG_BOARD_ESP32C3_ST7789_EC11)
 #define UI_FONT_BIG 0   /* 320x240 同 CYD：只链 14/16 压缩档全表 */
 #elif defined(CONFIG_BOARD_JC8048W550)
 #define UI_FONT_BIG 1
+#elif defined(CONFIG_BOARD_JC4827W543C)
+#define UI_FONT_BIG 0   /* 480x320 同 E32R35T：只链 14/16 压缩档全表 */
 #define UI_FONT_MIN 1   /* 最小子集（排障：缩小 flash 字形表的 XIP 流量），置 0 回全表 */
 #endif
 
