@@ -10,6 +10,10 @@ extern "C" {
 /* 板级初始化：显示 + 板载主输入 + LVGL 节拍任务 */
 void bsp_init(void);
 
+/* 当前板型的构建名（tools/build-esp32.sh 的板型代号，如 esp32s3-sensecap-indicator；
+   desktop 返回 "desktop"）。About 页展示用。 */
+const char *bsp_board_name(void);
+
 /* 可选附加输入：ESP32 按 Kconfig 建旋钮；desktop 建鼠标滚轮模拟器。 */
 void bsp_input_init(void);
 

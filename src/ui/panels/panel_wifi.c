@@ -158,7 +158,7 @@ static void open_password_dialog(const char *ssid)
     lv_textarea_set_placeholder_text(ta_pwd, TR("密码"));
     lv_obj_add_event_cb(ta_pwd, on_kb_ready, LV_EVENT_READY, NULL);
     lv_obj_add_event_cb(ta_pwd, on_kb_cancel, LV_EVENT_CANCEL, NULL);
-    lv_obj_set_width(ta_pwd, ui_px(300));
+    lv_obj_set_width(ta_pwd, LV_MIN(ui_px(300), ui_content_w()));   /* 方屏（480x480）下 2x 换算的 600px 会超出屏宽 */
     lv_obj_align(ta_pwd, LV_ALIGN_TOP_MID, 0, ui_px(34));
 
     lv_obj_t *kb = lv_keyboard_create(pwd_overlay);

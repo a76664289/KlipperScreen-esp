@@ -266,6 +266,8 @@ void bsp_restart(void)
     exit(0);
 }
 
+const char *bsp_board_name(void) { return "desktop"; }
+
 /* 桌面端调试前端：反色/旋转/镜像不提供（UI 会按 can_* 隐藏开关） */
 bool bsp_disp_can_invert(void)    { return false; }
 bool bsp_disp_can_rotate180(void) { return false; }

@@ -137,11 +137,12 @@ static void on_encoder_select(lv_event_t *e)
     lv_obj_remove_flag(encoder_overlay, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *card = theme_card(encoder_overlay);
-    lv_obj_set_size(card, ui_px(288), ui_px(148));
+    int cw = LV_MIN(ui_px(288), ui_content_w());   /* 方屏（480x480）2x 换算 576px 超屏宽 */
+    lv_obj_set_size(card, cw, ui_px(148));
     lv_obj_center(card);
     lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     encoder_message = theme_label(card, "", THEME_FONT_S, THEME_COL_TEXT);
-    lv_obj_set_width(encoder_message, ui_px(264));
+    lv_obj_set_width(encoder_message, cw - ui_px(24));
     lv_obj_set_style_text_align(encoder_message, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(encoder_message, LV_ALIGN_TOP_MID, 0, ui_px(8));
 

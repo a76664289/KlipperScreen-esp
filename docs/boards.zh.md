@@ -14,6 +14,7 @@
 | [esp32s3-ILI9488-480_320-xpt2046-ec11](#esp32s3-ili9488-480_320-xpt2046-ec11) | `esp32s3-ILI9488-480_320-xpt2046-ec11` | 3.5" 480×320 ILI9488 SPI | XPT2046 电阻（共总线）+ EC11 | ESP32-S3 N16R8 / 16MB | 🆕 新机型，MKS PI-TS35 |
 | [esp32s3-ILI9341-320_240-xpt2046-ec11](#esp32s3-ili9341-320_240-xpt2046-ec11) | `esp32s3-ILI9341-320_240-xpt2046-ec11` | 320×240 ILI9341 SPI | XPT2046 电阻（共总线）+ EC11 | ESP32-S3 N16R8 / 16MB | 🆕 新机型 |
 | [JC8048W550](#jc8048w550) | `jc8048w550` | 5" 800×480 ST7262 RGB 并口 | GT911 电容 | ESP32-S3 / 16MB | ✅ 稳定 |
+| [SenseCAP Indicator](#sensecap-indicator) | `esp32s3-sensecap-indicator` | 4" 480×480 ST7701S RGB 并口 | FT5x06 电容 | ESP32-S3 N8R8 / 8MB | 🆕 新机型 |
 | [立创实战派 ESP32-S3](#立创实战派-esp32-s3) | `esp32s3-JLC-SZP` | 2.0" 240×320 ST7789 SPI | FT6336 电容 | ESP32-S3 N16R8 / 16MB | ✅ 已实机验证 |
 | [esp32s3-retro-go](#esp32s3-retro-go) | `esp32s3-retro-go` | 3.2" 240×320 ST7789 SPI | 无，GPIO 按键 | ESP32-S3 / 16MB | 🆕 新机型 |
 | [esp32c3-st7789-320_240-ec11](#esp32c3-st7789-320_240-ec11) | `esp32c3-st7789-320_240-ec11` | 240×320 ST7789 SPI | 无，纯旋钮 | ESP32-C3 / 4MB | 🆕 新机型，合宙 CORE/Super Mini 通用 |
@@ -34,6 +35,7 @@
 | esp32s3-ILI9488-480_320-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9488-480_320-xpt2046-ec11.zip) |
 | esp32s3-ILI9341-320_240-xpt2046-ec11 | [ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-ILI9341-320_240-xpt2046-ec11.zip) |
 | JC8048W550 | [ESP-IDFv5.5-jc8048w550.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-jc8048w550.zip) |
+| SenseCAP Indicator | [ESP-IDFv5.5-esp32s3-sensecap-indicator.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-sensecap-indicator.zip) |
 | 立创实战派 ESP32-S3 | [ESP-IDFv5.5-esp32s3-JLC-SZP.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-JLC-SZP.zip) |
 | esp32s3-retro-go | [ESP-IDFv5.5-esp32s3-retro-go.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32s3-retro-go.zip) |
 | esp32c3-st7789-320_240-ec11 | [ESP-IDFv5.5-esp32c3-st7789-320_240-ec11.zip](https://github.com/umeiko/KlipperScreen-esp/releases/latest/download/ESP-IDFv5.5-esp32c3-st7789-320_240-ec11.zip) |
@@ -379,6 +381,35 @@ CYD 固件默认已启用旋转编码器支持（PCNT 硬件正交解码）。�
 | LCD 背光 | 2 |
 | 触摸 SDA / SCL / RST | 19 / 20 / 38 |
 | BOOT 按键（息屏/唤醒） | 0 |
+
+## SenseCAP Indicator
+
+*Seeed SenseCAP Indicator（D1/D1S/D1L/D1Pro 显示部分硬件相同）：4" 480×480 方形电容屏，ESP32-S3 + RP2040 双主控设计。硬件资料：[Seeed Wiki](https://wiki.seeedstudio.com/cn/SenseCAP_Indicator_ESP32_4_inch_Touch_Screen/)。*
+
+![SenseCAP Indicator 运行 KlipperScreen-esp](screenshots/boards/sensecap_indicator.gif)
+
+逻辑分辨率 **480×480**。
+
+- 主控：ESP32-S3-WROOM-1-N8R8，8MB QIO Flash + 8MB Octal PSRAM @ 80MHz
+- 显示：ST7701S RGB 并口（RGB565），PCLK 12MHz（约 42fps）；与 JC8048W550 同款自研 **rgb44** 驱动（IDF 4.4 传输模型 + vsync 换页，LVGL DIRECT 双帧缓冲 2×450KB 放 PSRAM）。面板初始化走位 bang 3 线 9-bit SPI——SCK/MOSI 是真 GPIO，CS/RST 挂在 TCA9535 扩展器上——初始化序列照抄官方 Seeed SDK
+- IO 扩展器：TCA9535，I2C0（先探 0x20，后期批次回退 0x39）；还挂着 RP2040 的复位线（拉高释放——RP2040 跑出厂固件，与本项目无关）
+- 触摸：FT5x06 电容屏，与扩展器共用 I2C0，TP_RST 也在扩展器上（建驱动前先手动复位），无需校准
+- 背光：GPIO45，LEDC PWM，高电平点亮（strapping 脚，官方 SDK 同样用法）
+- 息屏/唤醒：侧键（GPIO38，低电平有效）
+- 烧录请用 **"USB-SERIAL"（CH340）那个 Type-C 口**——ESP32-S3 侧，控制台 UART0 @ 115200。另一个口是 RP2040 的原生 USB，**不要**用它
+
+| 功能 | GPIO | 备注 |
+|---|---|---|
+| LCD HSYNC / VSYNC / DE / PCLK | 16 / 17 / 18 / 21 | RGB 并口 |
+| LCD B0..B4 | 15, 14, 13, 12, 11 | |
+| LCD G0..G5 | 10, 9, 8, 7, 6, 5 | |
+| LCD R0..R4 | 4, 3, 2, 1, 0 | |
+| LCD 背光 | 45 | LEDC PWM，高电平点亮 |
+| 初始化 SPI SCK / MOSI | 41 / 48 | 位 bang 3 线 9-bit |
+| LCD CS / LCD RST | TCA9535 P4 / P5 | IO 扩展器，I2C 0x20（部分批次 0x39） |
+| TP RST / RP2040 RST | TCA9535 P7 / P8 | |
+| 触摸 + 扩展器 SDA / SCL | 39 / 40 | I2C0 @ 100kHz |
+| 侧键（息屏/唤醒） | 38 | 低电平有效，内部上拉 |
 
 ## 立创实战派 ESP32-S3
 

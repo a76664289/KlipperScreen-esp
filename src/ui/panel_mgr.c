@@ -16,6 +16,7 @@ extern panel_def_t panel_files_def;
 extern panel_def_t panel_file_detail_def;
 extern panel_def_t panel_settings_def;
 extern panel_def_t panel_language_def;
+extern panel_def_t panel_about_def;
 extern panel_def_t panel_display_def;
 extern panel_def_t panel_display_color_def;
 extern panel_def_t panel_wifi_def;
@@ -36,6 +37,7 @@ static panel_def_t *registry[] = {
     &panel_file_detail_def,
     &panel_settings_def,
     &panel_language_def,
+    &panel_about_def,
     &panel_display_def,
     &panel_display_color_def,
     &panel_wifi_def,

@@ -127,13 +127,15 @@ BSP 还有两个配套抽象：
 | `esp32s3-ILI9488-480_320-xpt2046-ec11` | ESP32-S3 | 480×320 ILI9488（18-bit SPI） | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
 | `esp32s3-ILI9341-320_240-xpt2046-ec11` | ESP32-S3 | 320×240 ILI9341 | XPT2046 电阻触摸（共总线）+ EC11 | esp_lcd SPI |
 | `jc8048w550` | ESP32-S3 | 5" 800×480 RGB 并口 | GT911 电容触摸 | 自研 rgb44（见下） |
+| `esp32s3-sensecap-indicator` | ESP32-S3 | 4" 480×480 ST7701S RGB 并口 | FT5x06 电容触摸 | 自研 rgb44（同 JC8048） |
 | `esp32s3-JLC-SZP` | ESP32-S3 | 2.0" 320×240 ST7789 | FT6336 电容触摸 | 手动 SPI（见下） |
 | `esp32s3-retro-go` | ESP32-S3 | 3.2" 320×240 ST7789 | GPIO 按键（无触摸） | esp_lcd SPI |
 | `esp32c3-st7789-320_240-ec11` | ESP32-C3 | 320×240 ST7789 | EC11 旋钮（无触摸，软件正交解码） | esp_lcd SPI |
 
-两块特殊板型：
+三块特殊板型：
 
 - **JC8048W550**：不用 IDF 5.5 的 `esp_lcd_rgb_panel`，用自研驱动 `src/bsp/esp32/rgb44.c`（IDF 4.4 传输模型：每帧扫完自停 + vsync 全量重启，欠载帧下一拍自愈）+ LVGL DIRECT 双缓冲（PSRAM 双 fb，vsync 换页，flush 前整帧 `esp_cache_msync` 回写）。完整机制链与测量过程见 [jc8048w550-rgb-display-guide.md](jc8048w550-rgb-display-guide.md)，这里不展开。
+- **SenseCAP Indicator**：与 JC8048 共用同一套 rgb44 + LVGL DIRECT 双缓冲渲染路径（PCLK 12MHz，480×480 方形屏），差异在面板初始化（ST7701S 位 bang 3 线 9-bit SPI，CS/RST 挂 TCA9535 I²C 扩展器）和触摸（FT5x06，GX 批次地址 0x48）。详见 [boards.md](boards.md#sensecap-indicator)。
 - **esp32s3-JLC-SZP（立创实战派）**：不用 esp_lcd 面板驱动——CS 在 PCA9557 I²C 扩展器上，面板要求每笔交易都有 CS 下降沿，BSP 直接 SPI master + 手动控 CS/DC，初始化序列照抄 TFT_eSPI。
 
 新增板型的完整流程见 [porting.md](porting.md) 与 [contributing-board.md](contributing-board.md)。

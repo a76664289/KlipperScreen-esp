@@ -206,11 +206,14 @@ static lv_obj_t *make_row(lv_obj_t *parent, const char *name, uint32_t col,
     lv_obj_t *ic = theme_img(row, icon, col);
     lv_obj_align(ic, LV_ALIGN_LEFT_MID, ui_px(4), 0);
 
-    lv_obj_t *name_lbl = theme_label(row, name, THEME_FONT_M, THEME_COL_TEXT);
+    /* 方屏（480x480）行内容区比 2x 基准窄：名字降一号字、当前值右移一点，
+       避免 "Extruder" 与大号温度值视觉粘连（其它分辨率不变） */
+    int narrow = ui_scr_w() < ui_px(280);
+    lv_obj_t *name_lbl = theme_label(row, name, narrow ? THEME_FONT_S : THEME_FONT_M, THEME_COL_TEXT);
     lv_obj_align(name_lbl, LV_ALIGN_LEFT_MID, ui_px(44), 0);
 
     lv_obj_t *cur = theme_label(row, "--", THEME_FONT_L, col);
-    lv_obj_align(cur, LV_ALIGN_RIGHT_MID, -ui_px(58), 0);
+    lv_obj_align(cur, LV_ALIGN_RIGHT_MID, narrow ? -ui_px(50) : -ui_px(58), 0);
 
     lv_obj_t *tgt = theme_label(row, "/0°", THEME_FONT_S, THEME_COL_TEXT_DIM);
     lv_obj_align(tgt, LV_ALIGN_RIGHT_MID, -ui_px(4), ui_px(6));
@@ -307,4 +310,5 @@ panel_def_t panel_temperature_def = {
     .create = create,
     .on_show = update_temps,
     .on_tick = update_temps,
+    .hide_temps = 1,   /* 整页就是温度：标题栏温度冗余，且长标题（如法语）会与温度数值压叠 */
 };

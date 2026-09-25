@@ -131,7 +131,7 @@ static void open_text_dialog(const char *title, char *target, size_t cap,
     lv_textarea_set_text(ta, target);
     lv_obj_add_event_cb(ta, on_txt_ready, LV_EVENT_READY, NULL);
     lv_obj_add_event_cb(ta, on_txt_cancel, LV_EVENT_CANCEL, NULL);
-    lv_obj_set_width(ta, ui_px(300));
+    lv_obj_set_width(ta, LV_MIN(ui_px(300), ui_content_w()));   /* 方屏（480x480）下 2x 换算的 600px 会超出屏宽 */
     lv_obj_align(ta, LV_ALIGN_TOP_MID, 0, ui_px(34));
 
     lv_obj_t *kb = lv_keyboard_create(txt_overlay);
