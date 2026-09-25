@@ -1,7 +1,7 @@
 /*
  * BSP: JC4827W543C（ESP32-S3-WROOM-1，4.3" 480x272 QSPI ST3401A/NV3041A + GT911）
  * 引脚与 QSPI 时序取自厂商 Arduino 例程（ESP32_4827A043_QSPI）。
- *
+ * 
  * QSPI 时序严格照 Arduino_ESP32QSPI.cpp：
  *   - 命令帧：cmd=0x02, addr=(面板命令<<8)，参数用 tx_data（≤4B）或 tx_buffer
  *   - 数据帧：第一帧 cmd=0x32, addr=0x003C00；后续帧带 VARIABLE_CMD/ADDR 不带 cmd/addr

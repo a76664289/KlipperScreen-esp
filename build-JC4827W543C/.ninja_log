@@ -1,7 +1,0 @@
-# ninja log v6
-1247	1785	8120220063203055	project_elf_src_esp32.c	9b4c85e4349cc07f
-1247	1785	8120220063203055	F:/2016-03-19/KlipperScreen-esp/build-JC4827W543C/project_elf_src_esp32.c	9b4c85e4349cc07f
-1118	2195	8120220067424302	esp-idf/esp_system/ld/sections.ld.in	a872d13ff8b6a2fc
-1118	2195	8120220067424302	F:/2016-03-19/KlipperScreen-esp/build-JC4827W543C/esp-idf/esp_system/ld/sections.ld.in	a872d13ff8b6a2fc
-1053	2199	8120220067444300	esp-idf/esp_system/ld/memory.ld	ec869b8e2a66838c
-1053	2199	8120220067444300	F:/2016-03-19/KlipperScreen-esp/build-JC4827W543C/esp-idf/esp_system/ld/memory.ld	ec869b8e2a66838c
